@@ -18,6 +18,7 @@
 		justify-content: center;
 		align-items: center;
 		height: 100%;
+		padding: 16px;
 	}
 
 	button {
@@ -33,12 +34,6 @@
 		transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
 		box-shadow: 0 0 20px var(--meta-glow);
 		letter-spacing: 0.02em;
-	}
-
-	button:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 0 30px var(--meta-glow), 0 4px 15px rgba(0, 0, 0, 0.3);
-		background: linear-gradient(135deg, var(--meta-blue), var(--meta-primary));
 	}
 
 	button:active {
