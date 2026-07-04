@@ -1,0 +1,33 @@
+:root {
+	--meta-dark: #1a2645;
+	--meta-darker: #0d1425;
+	--meta-primary: #2c3e6b;
+	--meta-blue: #3b5a9c;
+	--meta-accent: #40e0d0;
+	--meta-light: #e8eef2;
+	--meta-silver: #a0b0c0;
+	--meta-glow: rgba(64, 224, 208, 0.3);
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+html,
+body {
+	height: 100%;
+	background: var(--meta-darker);
+	color: var(--meta-light);
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+		Ubuntu, Cantarell, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+body {
+	display: flex;
+	flex-direction: column;
+}
