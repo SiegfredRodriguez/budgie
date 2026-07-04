@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
 export interface Account {
 	id: string;
@@ -8,21 +9,41 @@ export interface Account {
 	balance: number;
 }
 
-const initial: Account[] = [
-	{ id: 'checking', icon: 'bank', label: 'Checking Account', currency: 'PHP', balance: 250_000_000 },
-	{ id: 'savings', icon: 'piggy', label: 'Savings Account', currency: 'USD', balance: 50_000 },
-	{ id: 'credit', icon: 'card', label: 'Credit Card', currency: 'PHP', balance: -12_430.25 },
-	{ id: 'invest', icon: 'bank', label: 'Investment Portfolio', currency: 'USD', balance: 1_250_000 },
-	{ id: 'travel', icon: 'card', label: 'Travel Rewards', currency: 'PHP', balance: 85_200 },
-	{ id: 'emergency', icon: 'piggy', label: 'Emergency Fund', currency: 'USD', balance: 30_000 },
-	{ id: 'business', icon: 'bank', label: 'Business Account', currency: 'PHP', balance: 3_750_000 },
-	{ id: 'insurance', icon: 'card', label: 'Insurance Savings', currency: 'USD', balance: 15_500 },
-];
+const initial: Account[] = [];
 
 export const accounts = writable<Account[]>(initial);
 
-export function addAccount(account: Account) {
-	accounts.update((current) => [...current, account]);
+export async function loadAccounts() {
+	const res = await fetch(`${PUBLIC_SUPABASE_URL}/rest/v1/accounts?select=id,name,icon,currency,balance&order=created_at.asc`, {
+		headers: { 'apikey': PUBLIC_SUPABASE_ANON_KEY },
+	});
+	if (!res.ok) return;
+	const data = await res.json();
+	accounts.set(data.map((r: any) => ({ id: r.id, icon: r.icon, label: r.name, currency: r.currency, balance: r.balance })));
+}
+
+export async function addAccount(account: Omit<Account, 'id'>) {
+	const res = await fetch(`${PUBLIC_SUPABASE_URL}/functions/v1/create-account`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Bearer ${PUBLIC_SUPABASE_ANON_KEY}`,
+		},
+		body: JSON.stringify({
+			name: account.label,
+			icon: account.icon,
+			currency: account.currency,
+			balance: account.balance,
+		}),
+	});
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.error);
+	}
+	const raw = await res.json();
+	const created: Account = { id: raw.id, icon: raw.icon, label: raw.name, currency: raw.currency, balance: raw.balance };
+	accounts.update((current) => [...current, created]);
+	return created;
 }
 
 export function topUpAccount(id: string, amount: number) {

@@ -20,10 +20,6 @@
         return icons[Math.floor(Math.random() * icons.length)];
     }
 
-    function slugify(text: string) {
-        return text.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-    }
-
     function handleUpload(e: Event) {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (!file) return;
@@ -35,15 +31,19 @@
         reader.readAsDataURL(file);
     }
 
-    function handleSubmit() {
+    async function handleSubmit() {
         const picked = uploadedIcon || icon || randomIcon();
-        addAccount({
-            id: slugify(name) || crypto.randomUUID(),
-            icon: picked,
-            label: name || "Untitled Account",
-            currency: "PHP",
-            balance: parseFloat(initialValue) || 0,
-        });
+        try {
+            await addAccount({
+                icon: picked,
+                label: name || "Untitled Account",
+                currency: "PHP",
+                balance: parseFloat(initialValue) || 0,
+            });
+        } catch (e) {
+            console.error("Failed to create account", e);
+            return;
+        }
         icon = "";
         uploadedIcon = "";
         name = "";

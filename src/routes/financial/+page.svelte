@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { accounts, topUpAccount, transferAccount } from "$lib/stores/accounts";
+    import { accounts, topUpAccount, transferAccount, loadAccounts } from "$lib/stores/accounts";
 
     let scrollTop = $state(0);
     let headerHeight = $state(250);
@@ -85,6 +85,7 @@
 
     onMount(() => {
         scroller = document.querySelector(".scroller") as HTMLElement;
+        loadAccounts();
     });
 </script>
 
@@ -339,7 +340,7 @@
         gap: 0.75rem;
         padding-left: 1rem;
         padding-right: 1rem;
-        padding-bottom: 1.5rem;
+        padding-bottom: 6rem;
     }
 
     .card {
