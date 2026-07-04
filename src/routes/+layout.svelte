@@ -4,6 +4,7 @@
     import { onMount } from "svelte";
     import { page } from "$app/stores";
     import { addAccount } from "$lib/stores/accounts";
+    import { initLD } from "$lib/stores/flags";
 
     let { children } = $props();
 
@@ -56,6 +57,7 @@
     }
 
     onMount(() => {
+        initLD();
         if ("serviceWorker" in navigator) {
             const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
             navigator.serviceWorker.register(swUrl, {

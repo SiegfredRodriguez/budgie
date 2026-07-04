@@ -24,6 +24,7 @@
 		"vite": "^8.0.16"
 	},
 	"dependencies": {
-		"@supabase/supabase-js": "^2.110.0"
+		"@supabase/supabase-js": "^2.110.0",
+		"launchdarkly-js-client-sdk": "^3.9.3"
 	}
 }
