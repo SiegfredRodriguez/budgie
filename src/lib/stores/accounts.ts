@@ -46,7 +46,9 @@ export function subscribeAccounts() {
 				}
 			},
 		)
-		.subscribe();
+		.subscribe((status) => {
+			if (status === 'SUBSCRIBED') loadAccounts();
+		});
 }
 
 export function unsubscribeAccounts() {
