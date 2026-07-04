@@ -199,24 +199,24 @@
 
     .pill-btn {
         position: fixed;
-        top: calc(8px + env(safe-area-inset-top));
-        right: calc(16px + env(safe-area-inset-right));
-        height: 36px;
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        top: calc(0.5rem + env(safe-area-inset-top));
+        right: calc(1rem + env(safe-area-inset-right));
+        height: 2.25rem;
+        border-radius: 1.125rem;
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 0 14px 0 10px;
+        gap: 0.375rem;
+        padding: 0 0.875rem 0 0.625rem;
         background: rgba(26, 38, 69, 0.6);
-        -webkit-backdrop-filter: blur(20px);
-        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(1.25rem);
+        backdrop-filter: blur(1.25rem);
         color: var(--meta-light);
-        font-size: 13px;
+        font-size: 0.8125rem;
         font-weight: 600;
         cursor: pointer;
         z-index: 200;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.5);
         transition: transform 0.15s, background 0.15s;
         -webkit-tap-highlight-color: transparent;
         user-select: none;
@@ -228,8 +228,8 @@
     }
 
     .pill-btn svg {
-        width: 16px;
-        height: 16px;
+        width: 1rem;
+        height: 1rem;
         color: var(--meta-accent);
     }
 
@@ -241,28 +241,28 @@
         align-items: center;
         justify-content: center;
         z-index: 300;
-        -webkit-backdrop-filter: blur(4px);
-        backdrop-filter: blur(4px);
-        padding: 24px;
+        -webkit-backdrop-filter: blur(0.25rem);
+        backdrop-filter: blur(0.25rem);
+        padding: 1.5rem;
     }
 
     .modal {
         background: var(--meta-dark);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        padding: 32px 24px 24px;
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.25rem;
+        padding: 2rem 1.5rem 1.5rem;
         width: 100%;
-        max-width: 400px;
+        max-width: 25rem;
         position: relative;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5);
     }
 
     .modal-close {
         position: absolute;
-        top: 12px;
-        right: 12px;
-        width: 32px;
-        height: 32px;
+        top: 0.75rem;
+        right: 0.75rem;
+        width: 2rem;
+        height: 2rem;
         border-radius: 50%;
         border: none;
         display: flex;
@@ -280,40 +280,40 @@
     }
 
     .modal-close svg {
-        width: 18px;
-        height: 18px;
+        width: 1.125rem;
+        height: 1.125rem;
     }
 
     .modal-title {
-        font-size: 20px;
+        font-size: 1.25rem;
         font-weight: 600;
         color: var(--meta-light);
-        margin-bottom: 20px;
+        margin-bottom: 1.25rem;
     }
 
     .field {
-        margin-bottom: 16px;
+        margin-bottom: 1rem;
     }
 
     .field-label {
         display: block;
-        font-size: 13px;
+        font-size: 0.8125rem;
         font-weight: 600;
         color: var(--meta-silver);
-        margin-bottom: 8px;
+        margin-bottom: 0.5rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
     }
 
     .field-input {
         width: 100%;
-        height: 44px;
-        padding: 0 14px;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        height: 2.75rem;
+        padding: 0 0.875rem;
+        border-radius: 0.625rem;
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
         background: var(--meta-darker);
         color: var(--meta-light);
-        font-size: 16px;
+        font-size: 1rem;
         outline: none;
         transition: border-color 0.15s;
     }
@@ -328,14 +328,14 @@
 
     .icon-picker {
         display: flex;
-        gap: 10px;
+        gap: 0.625rem;
     }
 
     .icon-option {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        border: 2px solid rgba(255, 255, 255, 0.08);
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.75rem;
+        border: 0.125rem solid rgba(255, 255, 255, 0.08);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -353,8 +353,8 @@
     }
 
     .icon-option svg {
-        width: 24px;
-        height: 24px;
+        width: 1.5rem;
+        height: 1.5rem;
     }
 
     .upload-option {
@@ -362,9 +362,9 @@
     }
 
     .upload-preview {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.375rem;
         object-fit: cover;
     }
 
@@ -374,15 +374,15 @@
 
     .submit-btn {
         width: 100%;
-        height: 48px;
-        border-radius: 12px;
+        height: 3rem;
+        border-radius: 0.75rem;
         border: none;
         background: var(--meta-accent);
         color: var(--meta-darker);
-        font-size: 16px;
+        font-size: 1rem;
         font-weight: 700;
         cursor: pointer;
-        margin-top: 8px;
+        margin-top: 0.5rem;
         transition: opacity 0.15s;
         -webkit-tap-highlight-color: transparent;
     }
@@ -393,21 +393,21 @@
 
     .tab-bar {
         position: fixed;
-        bottom: 20px;
+        bottom: 1.25rem;
         left: 50%;
         transform: translateX(-50%);
-        width: calc(100% - 48px);
-        height: 52px;
+        width: calc(100% - 3rem);
+        height: 3.25rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 48px;
+        gap: 3rem;
         background: rgba(26, 38, 69, 0.6);
-        -webkit-backdrop-filter: blur(20px);
-        backdrop-filter: blur(20px);
-        border-radius: 28px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        -webkit-backdrop-filter: blur(1.25rem);
+        backdrop-filter: blur(1.25rem);
+        border-radius: 1.75rem;
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.5);
         z-index: 100;
     }
 
@@ -416,7 +416,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 2px;
+        gap: 0.125rem;
         text-decoration: none;
         color: var(--meta-silver);
         transition: color 0.15s;
@@ -431,12 +431,12 @@
     }
 
     .tab-icon {
-        width: 24px;
-        height: 24px;
+        width: 1.5rem;
+        height: 1.5rem;
     }
 
     .tab-label {
-        font-size: 10px;
+        font-size: 0.625rem;
         font-weight: 500;
         letter-spacing: 0.01em;
     }

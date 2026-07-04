@@ -178,7 +178,7 @@
         justify-content: center;
         z-index: 2;
         pointer-events: none;
-        padding-top: 64px;
+        padding-top: 4rem;
     }
 
     .summary-total {
@@ -186,15 +186,15 @@
         font-weight: 800;
         color: var(--meta-light);
         letter-spacing: 0.02em;
-        text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+        text-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.5);
     }
 
     .summary-sub {
         font-size: 0.875rem;
         font-weight: 500;
         color: var(--meta-silver);
-        margin-top: 4px;
-        text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+        margin-top: 0.25rem;
+        text-shadow: 0 0.0625rem 0.375rem rgba(0, 0, 0, 0.4);
     }
 
     .card-list {
@@ -202,33 +202,33 @@
         z-index: 2;
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        padding-left: 16px;
-        padding-right: 16px;
-        padding-bottom: 24px;
+        gap: 0.75rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-bottom: 1.5rem;
     }
 
     .card {
         display: flex;
         flex-direction: column;
-        gap: 14px;
-        padding: 16px;
+        gap: 0.875rem;
+        padding: 1rem;
         background: var(--meta-dark);
-        border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 0.875rem;
+        border: 0.0625rem solid rgba(255, 255, 255, 0.06);
     }
 
     .card-top {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 0.625rem;
     }
 
     .card-icon {
-        width: 32px;
-        height: 32px;
-        padding: 5px;
-        border-radius: 8px;
+        width: 2rem;
+        height: 2rem;
+        padding: 0.3125rem;
+        border-radius: 0.5rem;
         background: var(--meta-darker);
         color: var(--meta-accent);
         flex-shrink: 0;
@@ -254,15 +254,15 @@
 
     .card-actions {
         display: flex;
-        gap: 8px;
+        gap: 0.5rem;
     }
 
     .btn {
         flex: 1;
-        padding: 10px;
+        padding: 0.625rem;
         font-size: 0.875rem;
         font-weight: 600;
-        border-radius: 10px;
+        border-radius: 0.625rem;
         border: none;
         cursor: pointer;
         -webkit-tap-highlight-color: transparent;
@@ -281,6 +281,6 @@
     .btn-secondary {
         color: var(--meta-light);
         background: var(--meta-blue);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 0.0625rem solid rgba(255, 255, 255, 0.08);
     }
 </style>
