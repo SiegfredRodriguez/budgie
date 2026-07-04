@@ -46,23 +46,26 @@
 		flex: 1;
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
-		padding-bottom: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
+		padding-bottom: calc(24px + env(safe-area-inset-bottom));
 	}
 
 	.tab-bar {
 		position: fixed;
-		bottom: 0;
+		bottom: calc(24px + env(safe-area-inset-bottom));
 		left: 50%;
 		transform: translateX(-50%);
-		width: 100%;
-		max-width: 430px;
-		height: calc(var(--tab-bar-height) + env(safe-area-inset-bottom));
-		padding-bottom: env(safe-area-inset-bottom);
+		width: calc(100% - 40px);
+		max-width: 400px;
+		height: 52px;
 		display: flex;
 		align-items: center;
 		justify-content: space-around;
-		background: var(--meta-dark);
-		border-top: 1px solid rgba(255, 255, 255, 0.08);
+		background: rgba(26, 38, 69, 0.55);
+		-webkit-backdrop-filter: blur(20px);
+		backdrop-filter: blur(20px);
+		border-radius: 28px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 		z-index: 100;
 	}
 

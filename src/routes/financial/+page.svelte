@@ -1,60 +1,215 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
+	interface Account {
+		id: string;
+		icon: string;
+		label: string;
+		currency: string;
+		balance: number;
+	}
+
+	const accounts: Account[] = [
+		{ id: 'checking', icon: 'bank', label: 'Checking Account', currency: 'PHP', balance: 250_000_000 },
+		{ id: 'savings', icon: 'piggy', label: 'Savings Account', currency: 'USD', balance: 50_000 },
+		{ id: 'credit', icon: 'card', label: 'Credit Card', currency: 'PHP', balance: -12_430.25 },
+		{ id: 'invest', icon: 'bank', label: 'Investment Portfolio', currency: 'USD', balance: 1_250_000 },
+		{ id: 'travel', icon: 'card', label: 'Travel Rewards', currency: 'PHP', balance: 85_200 },
+		{ id: 'emergency', icon: 'piggy', label: 'Emergency Fund', currency: 'USD', balance: 30_000 },
+		{ id: 'business', icon: 'bank', label: 'Business Account', currency: 'PHP', balance: 3_750_000 },
+		{ id: 'insurance', icon: 'card', label: 'Insurance Savings', currency: 'USD', balance: 15_500 },
+	];
+
+	let scrollTop = $state(0);
+	let headerHeight = $state(250);
+	let scroller: HTMLElement;
+
+	function formatBalance(amount: number, currency: string): string {
+		const abs = Math.abs(amount);
+		const parts = abs.toFixed(2).split('.');
+		parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+		return `${currency} ${amount < 0 ? '-' : ''}${parts[0]}.${parts[1]}`;
+	}
+
+	function handleScroll() {
+		scrollTop = scroller.scrollTop;
+	}
+
+	onMount(() => {
+		scroller = document.querySelector('.scroller') as HTMLElement;
+	});
 </script>
 
-<div class="list">
-	<div class="account">
-		<div class="account-info">
-			<span class="account-name">Checking Account</span>
-			<span class="account-balance">$4,250.60</span>
-		</div>
+<div class="scroller" onscroll={handleScroll}>
+	<div
+		class="hero"
+		style="height: {headerHeight}px; transform: translateY({Math.max(scrollTop * 0.3, 0)}px)"
+	>
+		<div class="hero-overlay"></div>
+		<img
+			class="hero-img"
+			src="https://picsum.photos/seed/budgie/860/500"
+			alt=""
+			width="860"
+			height="500"
+		/>
 	</div>
-	<div class="account">
-		<div class="account-info">
-			<span class="account-name">Savings Account</span>
-			<span class="account-balance">$12,800.00</span>
-		</div>
-	</div>
-	<div class="account">
-		<div class="account-info">
-			<span class="account-name">Credit Card</span>
-			<span class="account-balance">-$430.25</span>
-		</div>
+
+	<div class="card-list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
+		{#each accounts as account}
+			<div class="card">
+				<div class="card-top">
+					<div class="card-icon">
+						{#if account.icon === 'bank'}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M3 21h18"/>
+								<path d="M3 10h18"/>
+								<path d="M5 6l7-3 7 3"/>
+								<path d="M4 10v11"/>
+								<path d="M20 10v11"/>
+								<path d="M8 14v3"/>
+								<path d="M12 14v3"/>
+								<path d="M16 14v3"/>
+							</svg>
+						{:else if account.icon === 'piggy'}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.4-1 1.4-1.8"/>
+								<path d="M21 5.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/>
+								<line x1="7" y1="11" x2="7" y2="11.01" stroke-width="3" stroke-linecap="round"/>
+							</svg>
+						{:else if account.icon === 'card'}
+							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="1" y="4" width="22" height="16" rx="2"/>
+								<line x1="1" y1="10" x2="23" y2="10"/>
+								<line x1="6" y1="15" x2="10" y2="15"/>
+							</svg>
+						{/if}
+					</div>
+					<span class="card-label">{account.label}</span>
+				</div>
+
+				<div class="card-balance">{formatBalance(account.balance, account.currency)}</div>
+
+				<div class="card-actions">
+					<button class="btn btn-primary">Top Up</button>
+					<button class="btn btn-secondary">Move</button>
+				</div>
+			</div>
+		{/each}
 	</div>
 </div>
 
 <style>
-	.list {
-		padding: 8px 16px;
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
+	.scroller {
+		height: 100%;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
 	}
 
-	.account {
+	.hero {
+		position: relative;
+		overflow: hidden;
+		will-change: transform;
+	}
+
+	.hero-img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	.hero-overlay {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(180deg, transparent 50%, var(--meta-darker));
+		z-index: 1;
+	}
+
+	.card-list {
+		position: relative;
+		z-index: 2;
 		display: flex;
-		align-items: center;
-		padding: 14px 12px;
+		flex-direction: column;
+		gap: 12px;
+		padding-left: 16px;
+		padding-right: 16px;
+		padding-bottom: 24px;
+	}
+
+	.card {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		padding: 16px;
 		background: var(--meta-dark);
-		border-radius: 10px;
+		border-radius: 14px;
 		border: 1px solid rgba(255, 255, 255, 0.06);
 	}
 
-	.account-info {
+	.card-top {
 		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		flex: 1;
+		align-items: center;
+		gap: 10px;
 	}
 
-	.account-name {
+	.card-icon {
+		width: 32px;
+		height: 32px;
+		padding: 5px;
+		border-radius: 8px;
+		background: var(--meta-darker);
+		color: var(--meta-accent);
+		flex-shrink: 0;
+	}
+
+	.card-icon :global(svg) {
+		width: 100%;
+		height: 100%;
+	}
+
+	.card-label {
 		font-size: 0.938rem;
-		font-weight: 500;
+		font-weight: 600;
 		color: var(--meta-light);
 	}
 
-	.account-balance {
-		font-size: 1rem;
+	.card-balance {
+		font-size: 1.25rem;
 		font-weight: 700;
 		color: var(--meta-accent);
+		letter-spacing: 0.01em;
+	}
+
+	.card-actions {
+		display: flex;
+		gap: 8px;
+	}
+
+	.btn {
+		flex: 1;
+		padding: 10px;
+		font-size: 0.875rem;
+		font-weight: 600;
+		border-radius: 10px;
+		border: none;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		transition: opacity 0.15s;
+	}
+
+	.btn:active {
+		opacity: 0.7;
+	}
+
+	.btn-primary {
+		color: var(--meta-darker);
+		background: var(--meta-accent);
+	}
+
+	.btn-secondary {
+		color: var(--meta-light);
+		background: var(--meta-blue);
+		border: 1px solid rgba(255, 255, 255, 0.08);
 	}
 </style>
