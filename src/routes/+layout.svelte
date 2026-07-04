@@ -6,6 +6,8 @@
 
     let { children } = $props();
 
+    let showModal = $state(false);
+
     onMount(() => {
         if ("serviceWorker" in navigator) {
             const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
@@ -23,6 +25,29 @@
 </svelte:head>
 
 <div id="app">
+    <button class="pill-btn" onclick={() => showModal = true}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        New Account
+    </button>
+
+    {#if showModal}
+        <div class="overlay" onclick={() => showModal = false} onkeydown={(e) => e.key === 'Escape' && (showModal = false)} role="presentation">
+            <div class="modal" onclick={(e) => e.stopPropagation()} onkeydown={() => {}} role="dialog" aria-modal="true" tabindex="-1">
+                <button class="modal-close" onclick={() => showModal = false} aria-label="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+                <h2 class="modal-title">Add</h2>
+                <p class="modal-desc">Modal content goes here</p>
+            </div>
+        </div>
+    {/if}
+
     <main class="content">
         {@render children()}
     </main>
@@ -71,6 +96,106 @@
         flex: 1;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+    }
+
+    .pill-btn {
+        position: fixed;
+        top: calc(16px + env(safe-area-inset-top));
+        right: calc(16px + env(safe-area-inset-right));
+        height: 44px;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 20px 0 16px;
+        background: rgba(26, 38, 69, 0.6);
+        -webkit-backdrop-filter: blur(20px);
+        backdrop-filter: blur(20px);
+        color: var(--meta-light);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        z-index: 200;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        transition: transform 0.15s, background 0.15s;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+    }
+
+    .pill-btn:active {
+        transform: scale(0.96);
+        background: rgba(26, 38, 69, 0.8);
+    }
+
+    .pill-btn svg {
+        width: 20px;
+        height: 20px;
+        color: var(--meta-accent);
+    }
+
+    .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 300;
+        -webkit-backdrop-filter: blur(4px);
+        backdrop-filter: blur(4px);
+        padding: 24px;
+    }
+
+    .modal {
+        background: var(--meta-dark);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 32px 24px 24px;
+        width: 100%;
+        max-width: 400px;
+        position: relative;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--meta-silver);
+        cursor: pointer;
+        transition: background 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .modal-close:hover {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    .modal-close svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .modal-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--meta-light);
+        margin-bottom: 8px;
+    }
+
+    .modal-desc {
+        font-size: 15px;
+        color: var(--meta-silver);
+        line-height: 1.5;
     }
 
     .tab-bar {
