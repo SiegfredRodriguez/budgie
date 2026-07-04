@@ -74,9 +74,7 @@ export async function addAccount(account: Omit<Account, 'id'>) {
 		throw new Error(err.error);
 	}
 	const raw = await res.json();
-	const created: Account = mapRow(raw);
-	accounts.update((current) => [...current, created]);
-	return created;
+	return mapRow(raw);
 }
 
 export function topUpAccount(id: string, amount: number) {
