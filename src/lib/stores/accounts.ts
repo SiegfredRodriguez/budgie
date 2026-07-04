@@ -30,3 +30,13 @@ export function topUpAccount(id: string, amount: number) {
 		current.map((a) => (a.id === id ? { ...a, balance: a.balance + amount } : a)),
 	);
 }
+
+export function transferAccount(fromId: string, toId: string, amount: number) {
+	accounts.update((current) =>
+		current.map((a) => {
+			if (a.id === fromId) return { ...a, balance: a.balance - amount };
+			if (a.id === toId) return { ...a, balance: a.balance + amount };
+			return a;
+		}),
+	);
+}

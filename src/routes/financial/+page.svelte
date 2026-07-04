@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { accounts, topUpAccount } from "$lib/stores/accounts";
+    import { accounts, topUpAccount, transferAccount } from "$lib/stores/accounts";
 
     let scrollTop = $state(0);
     let headerHeight = $state(250);
@@ -15,6 +15,44 @@
 
     let topUpTarget = $derived($accounts.find((a) => a.id === topUpAccountId));
     let topUpResult = $derived(topUpTarget ? topUpTarget.balance + (parseFloat(topUpAmount) || 0) : 0);
+
+    let showTransfer = $state(false);
+    let transferSourceId = $state("");
+    let transferAmount = $state("");
+    let transferTargetId = $state("");
+    let showTargetDropdown = $state(false);
+
+    let transferSource = $derived($accounts.find((a) => a.id === transferSourceId));
+    let transferTarget = $derived($accounts.find((a) => a.id === transferTargetId));
+    let transferOtherAccounts = $derived($accounts.filter((a) => a.id !== transferSourceId));
+    let transferNewSource = $derived(transferSource ? transferSource.balance - (parseFloat(transferAmount) || 0) : 0);
+    let transferNewTarget = $derived(transferTarget ? transferTarget.balance + (parseFloat(transferAmount) || 0) : 0);
+
+    function openTransfer(id: string) {
+        transferSourceId = id;
+        transferAmount = "";
+        transferTargetId = "";
+        showTargetDropdown = false;
+        showTransfer = true;
+    }
+
+    function handleTransferDone() {
+        if (!transferSource || !transferTarget) return;
+        const amount = parseFloat(transferAmount);
+        if (amount <= 0) return;
+        if (transferSource.balance < amount) return;
+        transferAccount(transferSourceId, transferTargetId, amount);
+        showTransfer = false;
+    }
+
+    function handleTransferOverlayClick(e: MouseEvent) {
+        if (e.target === e.currentTarget) showTransfer = false;
+    }
+
+    function selectTarget(id: string) {
+        transferTargetId = id;
+        showTargetDropdown = false;
+    }
 
     function openTopUp(id: string) {
         topUpAccountId = id;
@@ -156,7 +194,7 @@
 
                 <div class="card-actions">
                     <button class="btn btn-primary" onclick={() => openTopUp(account.id)}>Top Up</button>
-                    <button class="btn btn-secondary">Move</button>
+                    <button class="btn btn-secondary" onclick={() => openTransfer(account.id)}>Transfer</button>
                 </div>
             </div>
         {/each}
@@ -176,6 +214,59 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick={() => showTopUp = false}>Cancel</button>
                 <button class="btn btn-primary" onclick={handleTopUpDone}>Top Up</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if showTransfer && transferSource}
+    <div class="overlay" onclick={handleTransferOverlayClick} onkeydown={(e) => e.key === "Escape" && (showTransfer = false)} role="presentation">
+        <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+            <div class="modal-row">
+                <input class="modal-input" type="number" placeholder="Transfer Amount" bind:value={transferAmount} />
+            </div>
+
+            <div class="transfer-endpoint">
+                    <button class="transfer-dropdown-btn" onclick={() => showTargetDropdown = !showTargetDropdown}>
+                        {#if transferTarget}
+                            <div class="card-icon">
+                                {#if transferTarget.icon === "bank"}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18" /><path d="M3 10h18" /><path d="M5 6l7-3 7 3" /><path d="M4 10v11" /><path d="M20 10v11" /><path d="M8 14v3" /><path d="M12 14v3" /><path d="M16 14v3" /></svg>
+                                {:else if transferTarget.icon === "piggy"}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.4-1 1.4-1.8" /><path d="M21 5.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" /><line x1="7" y1="11" x2="7" y2="11.01" stroke-width="3" stroke-linecap="round" /></svg>
+                                {:else if transferTarget.icon === "card"}
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /><line x1="6" y1="15" x2="10" y2="15" /></svg>
+                                {/if}
+                            </div>
+                            <span class="transfer-label">{transferTarget.label}</span>
+                        {:else}
+                            <span class="transfer-placeholder">Select account</span>
+                        {/if}
+                        <svg class="transfer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                    </button>
+                    {#if showTargetDropdown}
+                        <div class="transfer-dropdown">
+                            {#each transferOtherAccounts as acct}
+                                <button class="transfer-option" onclick={() => selectTarget(acct.id)}>
+                                    <div class="card-icon">
+                                        {#if acct.icon === "bank"}
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18" /><path d="M3 10h18" /><path d="M5 6l7-3 7 3" /><path d="M4 10v11" /><path d="M20 10v11" /><path d="M8 14v3" /><path d="M12 14v3" /><path d="M16 14v3" /></svg>
+                                        {:else if acct.icon === "piggy"}
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.4-1 1.4-1.8" /><path d="M21 5.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" /><line x1="7" y1="11" x2="7" y2="11.01" stroke-width="3" stroke-linecap="round" /></svg>
+                                        {:else if acct.icon === "card"}
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /><line x1="6" y1="15" x2="10" y2="15" /></svg>
+                                        {/if}
+                                    </div>
+                                    <span class="transfer-label">{acct.label}</span>
+                                </button>
+                            {/each}
+                        </div>
+                    {/if}
+                </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick={() => showTransfer = false}>Cancel</button>
+                <button class="btn btn-primary" onclick={handleTransferDone}>Transfer</button>
             </div>
         </div>
     </div>
@@ -417,5 +508,111 @@
         padding: 0.75rem;
         font-size: 1rem;
         border-radius: 0.75rem;
+    }
+
+    .transfer-endpoint {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        min-width: 0;
+        width: 100%;
+        position: relative;
+    }
+
+    .transfer-endpoint .card-icon {
+        width: 1.75rem;
+        height: 1.75rem;
+        padding: 0.25rem;
+        flex-shrink: 0;
+    }
+
+    .transfer-label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--meta-light);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .transfer-dropdown-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.5rem;
+        border-radius: 0.625rem;
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+        background: var(--meta-darker);
+        color: var(--meta-light);
+        cursor: pointer;
+        width: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .transfer-dropdown-btn:active {
+        opacity: 0.7;
+    }
+
+    .transfer-placeholder {
+        font-size: 0.8125rem;
+        color: rgba(255, 255, 255, 0.35);
+    }
+
+    .transfer-chevron {
+        width: 1rem;
+        height: 1rem;
+        color: var(--meta-silver);
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .transfer-dropdown {
+        position: absolute;
+        inset: 100% 0 auto 0;
+        margin-top: 0.25rem;
+        background: var(--meta-darker);
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.625rem;
+        overflow: hidden;
+        z-index: 10;
+    }
+
+    .transfer-option {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        width: 100%;
+        padding: 0.5rem 0.625rem;
+        border: none;
+        background: transparent;
+        color: var(--meta-light);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .transfer-option:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .transfer-option .card-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        padding: 0.1875rem;
+    }
+
+    .transfer-sub {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.375rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--meta-silver);
+        text-align: center;
+        flex-wrap: wrap;
+    }
+
+    .transfer-sub-sep {
+        color: var(--meta-accent);
     }
 </style>
