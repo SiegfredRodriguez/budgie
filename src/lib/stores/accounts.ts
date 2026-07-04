@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { supabase } from '$lib/supabase';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export interface Account {
 	id: string;
@@ -13,13 +14,42 @@ const initial: Account[] = [];
 
 export const accounts = writable<Account[]>(initial);
 
+function mapRow(r: any): Account {
+	return { id: r.id, icon: r.icon, label: r.name, currency: r.currency, balance: r.balance };
+}
+
 export async function loadAccounts() {
-	const res = await fetch(`${PUBLIC_SUPABASE_URL}/rest/v1/accounts?select=id,name,icon,currency,balance&order=created_at.asc`, {
-		headers: { 'apikey': PUBLIC_SUPABASE_ANON_KEY },
-	});
-	if (!res.ok) return;
-	const data = await res.json();
-	accounts.set(data.map((r: any) => ({ id: r.id, icon: r.icon, label: r.name, currency: r.currency, balance: r.balance })));
+	const { data, error } = await supabase
+		.from('accounts')
+		.select('id,name,icon,currency,balance')
+		.order('created_at', { ascending: true });
+	if (error) return;
+	accounts.set((data ?? []).map(mapRow));
+}
+
+let sub: Awaited<ReturnType<typeof supabase.channel>>;
+
+export function subscribeAccounts() {
+	sub = supabase
+		.channel('accounts-changes')
+		.on(
+			'postgres_changes',
+			{ event: '*', schema: 'public', table: 'accounts' },
+			(payload: RealtimePostgresChangesPayload<{ id: string; name: string; icon: string; currency: string; balance: number }>) => {
+				if (payload.eventType === 'INSERT') {
+					accounts.update((current) => [...current, mapRow(payload.new)]);
+				} else if (payload.eventType === 'UPDATE') {
+					accounts.update((current) => current.map((a) => (a.id === payload.new.id ? mapRow(payload.new) : a)));
+				} else if (payload.eventType === 'DELETE') {
+					accounts.update((current) => current.filter((a) => a.id !== payload.old.id));
+				}
+			},
+		)
+		.subscribe();
+}
+
+export function unsubscribeAccounts() {
+	sub?.unsubscribe();
 }
 
 export async function addAccount(account: Omit<Account, 'id'>) {
@@ -41,7 +71,7 @@ export async function addAccount(account: Omit<Account, 'id'>) {
 		throw new Error(err.error);
 	}
 	const raw = await res.json();
-	const created: Account = { id: raw.id, icon: raw.icon, label: raw.name, currency: raw.currency, balance: raw.balance };
+	const created: Account = mapRow(raw);
 	accounts.update((current) => [...current, created]);
 	return created;
 }

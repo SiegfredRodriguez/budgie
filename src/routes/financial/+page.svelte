@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { accounts, topUpAccount, transferAccount, loadAccounts } from "$lib/stores/accounts";
+    import { onMount, onDestroy } from "svelte";
+    import { accounts, topUpAccount, transferAccount, loadAccounts, subscribeAccounts, unsubscribeAccounts } from "$lib/stores/accounts";
 
     let scrollTop = $state(0);
     let headerHeight = $state(250);
@@ -86,6 +86,11 @@
     onMount(() => {
         scroller = document.querySelector(".scroller") as HTMLElement;
         loadAccounts();
+        subscribeAccounts();
+    });
+
+    onDestroy(() => {
+        unsubscribeAccounts();
     });
 </script>
 
