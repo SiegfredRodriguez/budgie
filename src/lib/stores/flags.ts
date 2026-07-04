@@ -21,7 +21,7 @@ export async function initLD(userKey?: string) {
 	flags.set(allFlags);
 	ldReady.set(true);
 
-	client.on('change', (changed: Record<string, boolean | string | number>) => {
-		flags.update((current) => ({ ...current, ...changed }));
+	client.on('change', () => {
+		flags.set(client.allFlags());
 	});
 }
