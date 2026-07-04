@@ -24,3 +24,9 @@ export const accounts = writable<Account[]>(initial);
 export function addAccount(account: Account) {
 	accounts.update((current) => [...current, account]);
 }
+
+export function topUpAccount(id: string, amount: number) {
+	accounts.update((current) =>
+		current.map((a) => (a.id === id ? { ...a, balance: a.balance + amount } : a)),
+	);
+}

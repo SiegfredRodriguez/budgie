@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { accounts } from "$lib/stores/accounts";
+    import { accounts, topUpAccount } from "$lib/stores/accounts";
 
     let scrollTop = $state(0);
     let headerHeight = $state(250);
@@ -8,6 +8,31 @@
 
     let total = $derived($accounts.reduce((sum, a) => sum + a.balance, 0));
     let count = $derived($accounts.length);
+
+    let showTopUp = $state(false);
+    let topUpAccountId = $state("");
+    let topUpAmount = $state("");
+
+    let topUpTarget = $derived($accounts.find((a) => a.id === topUpAccountId));
+    let topUpResult = $derived(topUpTarget ? topUpTarget.balance + (parseFloat(topUpAmount) || 0) : 0);
+
+    function openTopUp(id: string) {
+        topUpAccountId = id;
+        topUpAmount = "";
+        showTopUp = true;
+    }
+
+    function handleTopUpDone() {
+        if (!topUpTarget) return;
+        const amount = parseFloat(topUpAmount);
+        if (amount <= 0) return;
+        topUpAccount(topUpAccountId, amount);
+        showTopUp = false;
+    }
+
+    function handleTopUpOverlayClick(e: MouseEvent) {
+        if (e.target === e.currentTarget) showTopUp = false;
+    }
 
     function formatBalance(amount: number, currency: string): string {
         const abs = Math.abs(amount);
@@ -130,13 +155,31 @@
                 </div>
 
                 <div class="card-actions">
-                    <button class="btn btn-primary">Top Up</button>
+                    <button class="btn btn-primary" onclick={() => openTopUp(account.id)}>Top Up</button>
                     <button class="btn btn-secondary">Move</button>
                 </div>
             </div>
         {/each}
     </div>
 </div>
+
+{#if showTopUp && topUpTarget}
+    <div class="overlay" onclick={handleTopUpOverlayClick} onkeydown={(e) => e.key === "Escape" && (showTopUp = false)} role="presentation">
+        <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+            <div class="modal-header">
+                <div class="modal-header-main">{formatBalance(topUpResult, topUpTarget.currency)}</div>
+                <div class="modal-header-sub">New Balance</div>
+            </div>
+            <div class="modal-row">
+                <input class="modal-input" type="number" placeholder="Top Up Amount" bind:value={topUpAmount} />
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick={() => showTopUp = false}>Cancel</button>
+                <button class="btn btn-primary" onclick={handleTopUpDone}>Top Up</button>
+            </div>
+        </div>
+    </div>
+{/if}
 
 <style>
     .scroller {
@@ -282,5 +325,97 @@
         color: var(--meta-light);
         background: var(--meta-blue);
         border: 0.0625rem solid rgba(255, 255, 255, 0.08);
+    }
+
+    .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 300;
+        -webkit-backdrop-filter: blur(0.25rem);
+        backdrop-filter: blur(0.25rem);
+        padding: 1.5rem;
+    }
+
+    .modal {
+        background: var(--meta-dark);
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        width: 100%;
+        max-width: 22rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+        text-align: center;
+        padding-bottom: 0.5rem;
+    }
+
+    .modal-header-main {
+        font-size: 1.625rem;
+        font-weight: 800;
+        color: var(--meta-light);
+        letter-spacing: 0.01em;
+        line-height: 1.2;
+    }
+
+    .modal-header-sub {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--meta-silver);
+        margin-top: 0.125rem;
+    }
+
+    .modal-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
+
+    .modal-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--meta-silver);
+    }
+
+    .modal-input {
+        width: 100%;
+        height: 2.5rem;
+        padding: 0 0.75rem;
+        border-radius: 0.625rem;
+        border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+        background: var(--meta-darker);
+        color: var(--meta-light);
+        font-size: 1rem;
+        text-align: left;
+        outline: none;
+        transition: border-color 0.15s;
+    }
+
+    .modal-input:focus {
+        border-color: var(--meta-accent);
+    }
+
+    .modal-input::placeholder {
+        color: rgba(255, 255, 255, 0.25);
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .modal-actions .btn {
+        padding: 0.75rem;
+        font-size: 1rem;
+        border-radius: 0.75rem;
     }
 </style>
