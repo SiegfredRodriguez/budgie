@@ -1,24 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-
-	interface Account {
-		id: string;
-		icon: string;
-		label: string;
-		currency: string;
-		balance: number;
-	}
-
-	const accounts: Account[] = [
-		{ id: 'checking', icon: 'bank', label: 'Checking Account', currency: 'PHP', balance: 250_000_000 },
-		{ id: 'savings', icon: 'piggy', label: 'Savings Account', currency: 'USD', balance: 50_000 },
-		{ id: 'credit', icon: 'card', label: 'Credit Card', currency: 'PHP', balance: -12_430.25 },
-		{ id: 'invest', icon: 'bank', label: 'Investment Portfolio', currency: 'USD', balance: 1_250_000 },
-		{ id: 'travel', icon: 'card', label: 'Travel Rewards', currency: 'PHP', balance: 85_200 },
-		{ id: 'emergency', icon: 'piggy', label: 'Emergency Fund', currency: 'USD', balance: 30_000 },
-		{ id: 'business', icon: 'bank', label: 'Business Account', currency: 'PHP', balance: 3_750_000 },
-		{ id: 'insurance', icon: 'card', label: 'Insurance Savings', currency: 'USD', balance: 15_500 },
-	];
+	import { accounts } from '$lib/stores/accounts';
 
 	let scrollTop = $state(0);
 	let headerHeight = $state(250);
@@ -56,7 +38,7 @@
 	</div>
 
 	<div class="card-list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-		{#each accounts as account}
+		{#each $accounts as account}
 			<div class="card">
 				<div class="card-top">
 					<div class="card-icon">
