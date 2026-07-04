@@ -199,21 +199,21 @@
 
     .pill-btn {
         position: fixed;
-        top: calc(16px + env(safe-area-inset-top));
+        top: calc(8px + env(safe-area-inset-top));
         right: calc(16px + env(safe-area-inset-right));
-        height: 44px;
-        border-radius: 22px;
+        height: 36px;
+        border-radius: 18px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 0 20px 0 16px;
+        gap: 6px;
+        padding: 0 14px 0 10px;
         background: rgba(26, 38, 69, 0.6);
         -webkit-backdrop-filter: blur(20px);
         backdrop-filter: blur(20px);
         color: var(--meta-light);
-        font-size: 14px;
-        font-weight: 500;
+        font-size: 13px;
+        font-weight: 600;
         cursor: pointer;
         z-index: 200;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -228,8 +228,8 @@
     }
 
     .pill-btn svg {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         color: var(--meta-accent);
     }
 
