@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
-    import { accounts, topUpAccount, transferAccount, loadAccounts, subscribeAccounts, unsubscribeAccounts } from "$lib/stores/accounts";
+    import { accounts, topUpAccount, transferAccount, deleteAccount, loadAccounts, subscribeAccounts, unsubscribeAccounts } from "$lib/stores/accounts";
+    import { flags } from "$lib/stores/flags";
 
     let scrollTop = $state(0);
     let headerHeight = $state(250);
@@ -70,6 +71,15 @@
 
     function handleTopUpOverlayClick(e: MouseEvent) {
         if (e.target === e.currentTarget) showTopUp = false;
+    }
+
+    async function handleDelete(id: string) {
+        if (!confirm("Delete this account? All transactions will be lost.")) return;
+        try {
+            await deleteAccount(id);
+        } catch (e) {
+            console.error("Failed to delete account", e);
+        }
     }
 
     function formatBalance(amount: number, currency: string): string {
@@ -201,6 +211,11 @@
                 <div class="card-actions">
                     <button class="btn btn-primary" onclick={() => openTopUp(account.id)}>Top Up</button>
                     <button class="btn btn-secondary" onclick={() => openTransfer(account.id)}>Transfer</button>
+                    {#if $flags['account.delete']}
+                        <button class="btn btn-danger" onclick={() => handleDelete(account.id)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1rem;height:1rem"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    {/if}
                 </div>
             </div>
         {/each}
@@ -422,6 +437,19 @@
         color: var(--meta-light);
         background: var(--meta-blue);
         border: 0.0625rem solid rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-danger {
+        color: #ff4d4d;
+        background: rgba(255, 77, 77, 0.1);
+        border: 0.0625rem solid rgba(255, 77, 77, 0.2);
+        padding: 0.375rem 0.625rem;
+        margin-left: auto;
+    }
+
+    .btn-danger svg {
+        width: 1rem;
+        height: 1rem;
     }
 
     .overlay {

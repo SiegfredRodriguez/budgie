@@ -77,6 +77,11 @@ export async function addAccount(account: Omit<Account, 'id'>) {
 	return mapRow(raw);
 }
 
+export async function deleteAccount(id: string) {
+	const { error } = await supabase.from('accounts').delete().eq('id', id);
+	if (error) throw new Error(error.message);
+}
+
 export function topUpAccount(id: string, amount: number) {
 	accounts.update((current) =>
 		current.map((a) => (a.id === id ? { ...a, balance: a.balance + amount } : a)),
