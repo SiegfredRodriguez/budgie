@@ -46,21 +46,20 @@
 		flex: 1;
 		overflow-y: auto;
 		-webkit-overflow-scrolling: touch;
-		padding-bottom: calc(24px + env(safe-area-inset-bottom));
 	}
 
 	.tab-bar {
 		position: fixed;
-		bottom: calc(24px + env(safe-area-inset-bottom));
+		bottom: 12px;
 		left: 50%;
 		transform: translateX(-50%);
-		width: calc(100% - 40px);
-		max-width: 400px;
+		width: calc(100% - 48px);
 		height: 52px;
 		display: flex;
 		align-items: center;
-		justify-content: space-around;
-		background: rgba(26, 38, 69, 0.55);
+		justify-content: center;
+		gap: 48px;
+		background: rgba(26, 38, 69, 0.6);
 		-webkit-backdrop-filter: blur(20px);
 		backdrop-filter: blur(20px);
 		border-radius: 28px;
