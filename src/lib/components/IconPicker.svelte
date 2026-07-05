@@ -1,22 +1,41 @@
 <script lang="ts">
+	import { supabase } from "$lib/supabase";
+
 	let {
 		value = "",
-		uploaded = "",
 		onchoose,
 	}: {
 		value: string;
-		uploaded: string;
-		onchoose: (icon: string, isUpload: boolean, file?: File) => void;
+		onchoose: (icon: string) => void;
 	} = $props();
 
-	const icons = ["wallet"] as const;
+	const builtin = ["wallet"] as const;
+	let uploadedIcons = $state<string[]>([]);
 
 	let fileInput: HTMLInputElement;
+	let uploading = $state(false);
 
-	function handleUpload(e: Event) {
+	async function handleUpload(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
 		if (!file) return;
-		onchoose("", true, file);
+		uploading = true;
+		try {
+			const ext = file.name.split(".").pop() || "png";
+			const path = `${crypto.randomUUID()}.${ext}`;
+			const { error } = await supabase.storage.from("account-icons").upload(path, file, {
+				contentType: file.type,
+			});
+			if (error) throw error;
+			const { data } = supabase.storage.from("account-icons").getPublicUrl(path);
+			const url = data.publicUrl;
+			uploadedIcons = [...uploadedIcons, url];
+			onchoose(url);
+		} catch (err) {
+			console.error("Upload failed", err);
+		} finally {
+			uploading = false;
+			fileInput.value = "";
+		}
 	}
 
 	function triggerUpload() {
@@ -25,13 +44,22 @@
 </script>
 
 <div class="icon-picker">
-	{#each icons as ic}
-		<button class="icon-option" class:selected={value === ic} onclick={() => onchoose(ic, false)} aria-label={ic}>
+	{#each builtin as ic}
+		<button class="icon-option" class:selected={value === ic} onclick={() => onchoose(ic)} aria-label={ic}>
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
 		</button>
 	{/each}
-	<button class="icon-option" class:selected={!!uploaded} onclick={triggerUpload} aria-label="upload">
-		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+	{#each uploadedIcons as url}
+		<button class="icon-option icon-img" class:selected={value === url} onclick={() => onchoose(url)} aria-label="uploaded icon">
+			<img src={url} alt="" />
+		</button>
+	{/each}
+	<button class="icon-option icon-add" onclick={triggerUpload} aria-label="add icon" disabled={uploading}>
+		{#if uploading}
+			...
+		{:else}
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+		{/if}
 	</button>
 </div>
 <input type="file" accept="image/*" class="file-input" bind:this={fileInput} onchange={handleUpload} />
@@ -41,9 +69,17 @@
 		display: flex;
 		gap: 0.625rem;
 		margin-bottom: 0.5rem;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+
+	.icon-picker::-webkit-scrollbar {
+		display: none;
 	}
 
 	.icon-option {
+		flex-shrink: 0;
 		width: 3rem;
 		height: 3rem;
 		border-radius: 0.75rem;
@@ -58,6 +94,11 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
+	.icon-option:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+
 	.icon-option.selected {
 		border-color: var(--meta-accent);
 		color: var(--meta-accent);
@@ -67,6 +108,13 @@
 	.icon-option svg {
 		width: 1.5rem;
 		height: 1.5rem;
+	}
+
+	.icon-img img {
+		width: 1.5rem;
+		height: 1.5rem;
+		border-radius: 0.25rem;
+		object-fit: cover;
 	}
 
 	.file-input {

@@ -8,11 +8,10 @@
 	}: {
 		show: boolean;
 		onclose: () => void;
-		onsubmit: (data: { icon: string; uploadFile: File | null; name: string; initialValue: string }) => void;
+		onsubmit: (data: { icon: string; name: string; initialValue: string }) => void;
 	} = $props();
 
 	let icon = $state("wallet");
-	let uploadFile = $state<File | null>(null);
 	let name = $state("");
 	let initialValue = $state("");
 	let nameInput: HTMLInputElement;
@@ -31,20 +30,13 @@
 		if (e.key === "Escape") onclose();
 	}
 
-	function handleChoose(ic: string, isUpload: boolean, file?: File) {
-		if (isUpload && file) {
-			uploadFile = file;
-			icon = "";
-		} else {
-			icon = ic;
-			uploadFile = null;
-		}
+	function handleChoose(ic: string) {
+		icon = ic;
 	}
 
 	function handleSubmit() {
-		onsubmit({ icon, uploadFile, name, initialValue });
+		onsubmit({ icon, name, initialValue });
 		icon = "wallet";
-		uploadFile = null;
 		name = "";
 		initialValue = "";
 	}
@@ -60,7 +52,7 @@
 
 			<div class="field">
 				<span class="field-label">Icon</span>
-				<IconPicker value={icon} uploaded={uploadFile ? "true" : ""} onchoose={handleChoose} />
+				<IconPicker value={icon} onchoose={handleChoose} />
 			</div>
 
 			<div class="field">
@@ -100,7 +92,7 @@
 		width: 100%;
 		max-width: 25rem;
 		position: relative;
-		box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5);
+		box-shadow: 0 1rem 3rem rgba(255, 255, 255, 0.1);
 	}
 
 	.modal-close {

@@ -55,17 +55,6 @@ export function unsubscribeAccounts() {
 	sub?.unsubscribe();
 }
 
-export async function uploadIcon(file: File): Promise<string> {
-	const ext = file.name.split('.').pop() || 'png';
-	const path = `${crypto.randomUUID()}.${ext}`;
-	const { error } = await supabase.storage.from('account-icons').upload(path, file, {
-		contentType: file.type,
-	});
-	if (error) throw new Error(error.message);
-	const { data } = supabase.storage.from('account-icons').getPublicUrl(path);
-	return data.publicUrl;
-}
-
 export async function addAccount(account: Omit<Account, 'id'>) {
 	const res = await fetch(`${PUBLIC_SUPABASE_URL}/functions/v1/create-account`, {
 		method: 'POST',

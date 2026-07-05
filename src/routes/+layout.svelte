@@ -3,7 +3,7 @@
     import favicon from "$lib/assets/favicon.svg";
     import { onMount } from "svelte";
     import { page } from "$app/stores";
-    import { addAccount, uploadIcon } from "$lib/stores/accounts";
+    import { addAccount } from "$lib/stores/accounts";
     import { initLD } from "$lib/stores/flags";
     import TabBar from "$lib/components/TabBar.svelte";
     import NewAccountDialog from "$lib/components/NewAccountDialog.svelte";
@@ -12,19 +12,10 @@
 
     let showModal = $state(false);
 
-    async function handleCreate(data: { icon: string; uploadFile: File | null; name: string; initialValue: string }) {
-        let iconUrl = data.icon || "wallet";
-        if (data.uploadFile) {
-            try {
-                iconUrl = await uploadIcon(data.uploadFile);
-            } catch (e) {
-                console.error("Failed to upload icon", e);
-                return;
-            }
-        }
+    async function handleCreate(data: { icon: string; name: string; initialValue: string }) {
         try {
             await addAccount({
-                icon: iconUrl,
+                icon: data.icon || "wallet",
                 label: data.name || "Untitled Account",
                 currency: "PHP",
                 balance: parseFloat(data.initialValue) || 0,
