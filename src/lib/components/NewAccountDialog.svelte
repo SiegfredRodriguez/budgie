@@ -15,9 +15,11 @@
 	let name = $state("");
 	let initialValue = $state("");
 	let nameInput: HTMLInputElement;
+	let busy = $state(false);
 
 	$effect(() => {
 		if (show) {
+			busy = false;
 			requestAnimationFrame(() => nameInput?.focus());
 		}
 	});
@@ -34,8 +36,14 @@
 		icon = ic;
 	}
 
-	function handleSubmit() {
-		onsubmit({ icon, name, initialValue });
+	async function handleSubmit() {
+		if (busy) return;
+		busy = true;
+		try {
+			await onsubmit({ icon, name, initialValue });
+		} finally {
+			busy = false;
+		}
 		icon = "wallet";
 		name = "";
 		initialValue = "";
@@ -65,7 +73,7 @@
 				<input id="initial" class="field-input" type="number" placeholder="PHP 0.00" bind:value={initialValue} />
 			</div>
 
-			<button class="submit-btn" onclick={handleSubmit}>Create Account</button>
+			<button class="submit-btn" onclick={handleSubmit} disabled={busy}>{busy ? "Creating..." : "Create Account"}</button>
 		</div>
 	</div>
 {/if}
@@ -173,4 +181,9 @@
 	}
 
 	.submit-btn:active { opacity: 0.7; }
+
+	.submit-btn:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
+	}
 </style>

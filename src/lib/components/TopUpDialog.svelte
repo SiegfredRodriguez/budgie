@@ -24,9 +24,11 @@
 
 	let result = $derived(target ? target.balance + (parseFloat(amount) || 0) : 0);
 	let amountInput: HTMLInputElement;
+	let busy = $state(false);
 
 	$effect(() => {
 		if (show) {
+			busy = false;
 			requestAnimationFrame(() => amountInput?.focus());
 		}
 	});
@@ -37,6 +39,16 @@
 
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === "Escape") onclose();
+	}
+
+	async function handleDone() {
+		if (busy) return;
+		busy = true;
+		try {
+			await ondone();
+		} finally {
+			busy = false;
+		}
 	}
 </script>
 
@@ -52,7 +64,7 @@
 			</div>
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={ondone}>Top Up</button>
+				<button class="btn btn-primary" onclick={handleDone} disabled={busy}>{busy ? "Processing..." : "Top Up"}</button>
 			</div>
 		</div>
 	</div>

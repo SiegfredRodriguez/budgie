@@ -30,6 +30,7 @@
 	} = $props();
 
 	let overBalance = $derived(!!source && parseFloat(amount) > source.balance);
+	let busy = $state(false);
 
 	function handleOverlay(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
@@ -37,6 +38,16 @@
 
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === "Escape") onclose();
+	}
+
+	async function handleDone() {
+		if (busy) return;
+		busy = true;
+		try {
+			await ondone();
+		} finally {
+			busy = false;
+		}
 	}
 </script>
 
@@ -82,7 +93,7 @@
 
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={ondone} disabled={overBalance}>Transfer</button>
+				<button class="btn btn-primary" onclick={handleDone} disabled={overBalance || busy}>{busy ? "Processing..." : "Transfer"}</button>
 			</div>
 		</div>
 	</div>
