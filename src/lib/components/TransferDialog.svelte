@@ -61,12 +61,12 @@
 
 				<div class="transfer-endpoint">
 					<button class="transfer-target-btn" onclick={ontoggle}>
-						{#if target}
-							<div class="transfer-icon"><Icon name={target.icon} /></div>
-							<span class="transfer-label">{target.label}</span>
-						{:else}
-							<span class="transfer-placeholder">Select target account</span>
-						{/if}
+						<div class="transfer-icon-placeholder">
+							{#if target}
+								<Icon name={target.icon} />
+							{/if}
+						</div>
+						<span class="transfer-label" class:transfer-placeholder={!target}>{target ? target.label : "Select target account"}</span>
 						<svg class="transfer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
 					</button>
 					{#if showDropdown}
@@ -169,6 +169,16 @@
 		text-overflow: ellipsis;
 	}
 
+	.transfer-placeholder {
+		color: rgba(255, 255, 255, 0.35);
+	}
+
+	.transfer-icon-placeholder {
+		width: 1.75rem;
+		height: 1.75rem;
+		flex-shrink: 0;
+	}
+
 	.transfer-endpoint {
 		width: 100%;
 		position: relative;
@@ -191,11 +201,6 @@
 
 	.transfer-target-btn:active { border-color: var(--meta-accent); }
 
-	.transfer-placeholder {
-		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.35);
-	}
-
 	.transfer-chevron {
 		width: 1rem;
 		height: 1rem;
@@ -209,7 +214,6 @@
 		inset: 100% 0 auto 0;
 		margin-top: 0.25rem;
 		background: var(--meta-darker);
-		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
 		border-radius: 0.625rem;
 		overflow: hidden;
 		z-index: 10;
