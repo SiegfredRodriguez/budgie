@@ -36,13 +36,17 @@
         showTransfer = true;
     }
 
-    function handleTransferDone() {
+    async function handleTransferDone() {
         if (!transferSource || !transferTarget) return;
         const amount = parseFloat(transferAmount);
         if (amount <= 0) return;
         if (transferSource.balance < amount) return;
-        transferAccount(transferSourceId, transferTargetId, amount);
-        showTransfer = false;
+        try {
+            await transferAccount(transferSourceId, transferTargetId, amount);
+            showTransfer = false;
+        } catch (e) {
+            console.error("Transfer failed", e);
+        }
     }
 
     function selectTarget(id: string) {

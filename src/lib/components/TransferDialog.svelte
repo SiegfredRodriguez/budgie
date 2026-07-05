@@ -29,6 +29,14 @@
 		ontoggle: () => void;
 	} = $props();
 
+	let amountInput: HTMLInputElement;
+
+	$effect(() => {
+		if (show) {
+			requestAnimationFrame(() => amountInput?.focus());
+		}
+	});
+
 	function handleOverlay(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
 	}
@@ -41,30 +49,41 @@
 {#if show && source}
 	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
-			<div class="modal-row">
-				<input class="modal-input" type="number" placeholder="Transfer Amount" value={amount} oninput={(e) => onamount((e.target as HTMLInputElement).value)} />
+			<div class="transfer-widget">
+				<div class="transfer-row transfer-source">
+					<div class="transfer-icon"><Icon name={source.icon} /></div>
+					<span class="transfer-label">{source.label}</span>
+				</div>
+
+				<div class="transfer-arrow">
+					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+				</div>
+
+				<div class="transfer-endpoint">
+					<button class="transfer-target-btn" onclick={ontoggle}>
+						{#if target}
+							<div class="transfer-icon"><Icon name={target.icon} /></div>
+							<span class="transfer-label">{target.label}</span>
+						{:else}
+							<span class="transfer-placeholder">Select target account</span>
+						{/if}
+						<svg class="transfer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+					</button>
+					{#if showDropdown}
+						<div class="transfer-dropdown">
+							{#each otherAccounts as acct}
+								<button class="transfer-option" onclick={() => onselect(acct.id)}>
+									<div class="transfer-icon"><Icon name={acct.icon} /></div>
+									<span class="transfer-label">{acct.label}</span>
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</div>
 			</div>
 
-			<div class="transfer-endpoint">
-				<button class="transfer-dropdown-btn" onclick={ontoggle}>
-					{#if target}
-						<div class="card-icon"><Icon name={target.icon} /></div>
-						<span class="transfer-label">{target.label}</span>
-					{:else}
-						<span class="transfer-placeholder">Select account</span>
-					{/if}
-					<svg class="transfer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-				</button>
-				{#if showDropdown}
-					<div class="transfer-dropdown">
-						{#each otherAccounts as acct}
-							<button class="transfer-option" onclick={() => onselect(acct.id)}>
-								<div class="card-icon"><Icon name={acct.icon} /></div>
-								<span class="transfer-label">{acct.label}</span>
-							</button>
-						{/each}
-					</div>
-				{/if}
+			<div class="modal-row">
+				<input class="modal-input" type="number" placeholder="Amount" value={amount} oninput={(e) => onamount((e.target as HTMLInputElement).value)} bind:this={amountInput} />
 			</div>
 
 			<div class="modal-actions">
@@ -102,6 +121,115 @@
 		box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5);
 	}
 
+	.transfer-widget {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 1rem;
+		background: var(--meta-darker);
+		border-radius: 0.75rem;
+		border: 0.0625rem solid rgba(255, 255, 255, 0.06);
+	}
+
+	.transfer-row {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.transfer-source {
+		color: var(--meta-silver);
+	}
+
+	.transfer-arrow {
+		color: var(--meta-accent);
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	.transfer-arrow svg {
+		width: 100%;
+		height: 100%;
+	}
+
+	.transfer-icon {
+		width: 1.75rem;
+		height: 1.75rem;
+		flex-shrink: 0;
+	}
+
+	.transfer-label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--meta-light);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.transfer-endpoint {
+		width: 100%;
+		position: relative;
+	}
+
+	.transfer-target-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.625rem;
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		background: transparent;
+		color: var(--meta-light);
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		transition: border-color 0.15s;
+	}
+
+	.transfer-target-btn:active { border-color: var(--meta-accent); }
+
+	.transfer-placeholder {
+		font-size: 0.8125rem;
+		color: rgba(255, 255, 255, 0.35);
+	}
+
+	.transfer-chevron {
+		width: 1rem;
+		height: 1rem;
+		color: var(--meta-silver);
+		margin-left: auto;
+		flex-shrink: 0;
+	}
+
+	.transfer-dropdown {
+		position: absolute;
+		inset: 100% 0 auto 0;
+		margin-top: 0.25rem;
+		background: var(--meta-darker);
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.625rem;
+		overflow: hidden;
+		z-index: 10;
+	}
+
+	.transfer-option {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.5rem 0.75rem;
+		border: none;
+		background: transparent;
+		color: var(--meta-light);
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.transfer-option:hover { background: rgba(255, 255, 255, 0.05); }
+
 	.modal-row {
 		display: flex;
 		align-items: center;
@@ -135,92 +263,6 @@
 		padding: 0.75rem;
 		font-size: 1rem;
 		border-radius: 0.75rem;
-	}
-
-	.transfer-endpoint {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		min-width: 0;
-		width: 100%;
-		position: relative;
-	}
-
-	.transfer-endpoint .card-icon {
-		width: 1.75rem;
-		height: 1.75rem;
-		padding: 0.25rem;
-		flex-shrink: 0;
-	}
-
-	.transfer-label {
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--meta-light);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.transfer-dropdown-btn {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		padding: 0.375rem 0.5rem;
-		border-radius: 0.625rem;
-		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
-		background: var(--meta-darker);
-		color: var(--meta-light);
-		cursor: pointer;
-		width: 100%;
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.transfer-dropdown-btn:active { opacity: 0.7; }
-
-	.transfer-placeholder {
-		font-size: 0.8125rem;
-		color: rgba(255, 255, 255, 0.35);
-	}
-
-	.transfer-chevron {
-		width: 1rem;
-		height: 1rem;
-		color: var(--meta-silver);
-		margin-left: auto;
-		flex-shrink: 0;
-	}
-
-	.transfer-dropdown {
-		position: absolute;
-		inset: 100% 0 auto 0;
-		margin-top: 0.25rem;
-		background: var(--meta-darker);
-		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
-		border-radius: 0.625rem;
-		overflow: hidden;
-		z-index: 10;
-	}
-
-	.transfer-option {
-		display: flex;
-		align-items: center;
-		gap: 0.375rem;
-		width: 100%;
-		padding: 0.5rem 0.625rem;
-		border: none;
-		background: transparent;
-		color: var(--meta-light);
-		cursor: pointer;
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.transfer-option:hover { background: rgba(255, 255, 255, 0.05); }
-
-	.transfer-option .card-icon {
-		width: 1.5rem;
-		height: 1.5rem;
-		padding: 0.1875rem;
 	}
 
 	.btn {

@@ -101,12 +101,22 @@ export async function topUpAccount(id: string, amount: number) {
 	}
 }
 
-export function transferAccount(fromId: string, toId: string, amount: number) {
-	accounts.update((current) =>
-		current.map((a) => {
-			if (a.id === fromId) return { ...a, balance: a.balance - amount };
-			if (a.id === toId) return { ...a, balance: a.balance + amount };
-			return a;
+export async function transferAccount(fromId: string, toId: string, amount: number) {
+	const res = await fetch(`${PUBLIC_SUPABASE_URL}/functions/v1/transfer-account`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Bearer ${PUBLIC_SUPABASE_ANON_KEY}`,
+		},
+		body: JSON.stringify({
+			from_id: fromId,
+			to_id: toId,
+			amount,
+			currency: 'PHP',
 		}),
-	);
+	});
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.error);
+	}
 }
