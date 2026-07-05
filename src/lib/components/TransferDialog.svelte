@@ -29,14 +29,6 @@
 		ontoggle: () => void;
 	} = $props();
 
-	let amountInput: HTMLInputElement;
-
-	$effect(() => {
-		if (show) {
-			requestAnimationFrame(() => amountInput?.focus());
-		}
-	});
-
 	function handleOverlay(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
 	}
@@ -50,40 +42,41 @@
 	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
 			<div class="transfer-widget">
-				<div class="transfer-row transfer-source">
-					<div class="transfer-icon"><Icon name={source.icon} /></div>
-					<span class="transfer-label">{source.label}</span>
+				<div class="transfer-source">
+					<div class="transfer-source-icon"><Icon name={source.icon} /></div>
+					<span class="transfer-source-label">{source.label}</span>
 				</div>
-
 				<div class="transfer-arrow">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
 				</div>
+			</div>
 
-				<div class="transfer-endpoint">
-					<button class="transfer-target-btn" onclick={ontoggle}>
-						<div class="transfer-icon-placeholder">
-							{#if target}
-								<Icon name={target.icon} />
-							{/if}
-						</div>
-						<span class="transfer-label" class:transfer-placeholder={!target}>{target ? target.label : "Select target account"}</span>
-						<svg class="transfer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-					</button>
-					{#if showDropdown}
-						<div class="transfer-dropdown">
-							{#each otherAccounts as acct}
-								<button class="transfer-option" onclick={() => onselect(acct.id)}>
-									<div class="transfer-icon"><Icon name={acct.icon} /></div>
-									<span class="transfer-label">{acct.label}</span>
-								</button>
-							{/each}
-						</div>
-					{/if}
-				</div>
+			<div class="transfer-balance">{source.currency} {source.balance.toFixed(2)}</div>
+
+			<div class="transfer-endpoint">
+				<button class="transfer-target-btn" onclick={ontoggle}>
+					<div class="transfer-target-icon">
+						{#if target}
+							<Icon name={target.icon} />
+						{/if}
+					</div>
+					<span class="transfer-target-label" class:transfer-placeholder={!target}>{target ? target.label : "Select target account"}</span>
+					<svg class="transfer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+				</button>
+				{#if showDropdown}
+					<div class="transfer-dropdown">
+						{#each otherAccounts as acct}
+							<div class="transfer-option" role="button" tabindex="0" onclick={() => onselect(acct.id)} onkeydown={(e) => e.key === "Enter" && onselect(acct.id)}>
+								<div class="transfer-option-icon"><Icon name={acct.icon} /></div>
+								<span class="transfer-option-label">{acct.label}</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<div class="modal-row">
-				<input class="modal-input" type="number" placeholder="Amount" value={amount} oninput={(e) => onamount((e.target as HTMLInputElement).value)} bind:this={amountInput} />
+				<input class="modal-input" type="number" placeholder="Amount" value={amount} oninput={(e) => onamount((e.target as HTMLInputElement).value)} />
 			</div>
 
 			<div class="modal-actions">
@@ -125,22 +118,32 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.75rem;
+		gap: 0.625rem;
 		padding: 1rem;
 		background: var(--meta-darker);
 		border-radius: 0.75rem;
-		border: 0.0625rem solid rgba(255, 255, 255, 0.06);
 	}
 
-	.transfer-row {
+	.transfer-source {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		width: 100%;
 	}
 
-	.transfer-source {
+	.transfer-source-icon {
+		width: 1.75rem;
+		height: 1.75rem;
+		flex-shrink: 0;
+	}
+
+	.transfer-source-label {
+		font-size: 0.875rem;
+		font-weight: 600;
 		color: var(--meta-silver);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.transfer-arrow {
@@ -154,29 +157,12 @@
 		height: 100%;
 	}
 
-	.transfer-icon {
-		width: 1.75rem;
-		height: 1.75rem;
-		flex-shrink: 0;
-	}
-
-	.transfer-label {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--meta-light);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.transfer-placeholder {
-		color: rgba(255, 255, 255, 0.35);
-	}
-
-	.transfer-icon-placeholder {
-		width: 1.75rem;
-		height: 1.75rem;
-		flex-shrink: 0;
+	.transfer-balance {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--meta-accent);
+		text-align: center;
+		letter-spacing: 0.01em;
 	}
 
 	.transfer-endpoint {
@@ -201,6 +187,25 @@
 
 	.transfer-target-btn:active { border-color: var(--meta-accent); }
 
+	.transfer-target-icon {
+		width: 1.75rem;
+		height: 1.75rem;
+		flex-shrink: 0;
+	}
+
+	.transfer-target-label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--meta-light);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.transfer-placeholder {
+		color: rgba(255, 255, 255, 0.35);
+	}
+
 	.transfer-chevron {
 		width: 1rem;
 		height: 1rem;
@@ -211,7 +216,9 @@
 
 	.transfer-dropdown {
 		position: absolute;
-		inset: 100% 0 auto 0;
+		top: 100%;
+		left: 0;
+		right: 0;
 		margin-top: 0.25rem;
 		background: var(--meta-darker);
 		border-radius: 0.625rem;
@@ -225,14 +232,30 @@
 		gap: 0.5rem;
 		width: 100%;
 		padding: 0.5rem 0.75rem;
-		border: none;
 		background: transparent;
 		color: var(--meta-light);
 		cursor: pointer;
 		-webkit-tap-highlight-color: transparent;
+		outline: none;
 	}
 
 	.transfer-option:hover { background: rgba(255, 255, 255, 0.05); }
+	.transfer-option:focus-visible { outline: none; }
+
+	.transfer-option-icon {
+		width: 1.75rem;
+		height: 1.75rem;
+		flex-shrink: 0;
+	}
+
+	.transfer-option-label {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--meta-light);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 
 	.modal-row {
 		display: flex;
