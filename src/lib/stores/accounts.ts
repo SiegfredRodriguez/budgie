@@ -82,10 +82,23 @@ export async function deleteAccount(id: string) {
 	if (error) throw new Error(error.message);
 }
 
-export function topUpAccount(id: string, amount: number) {
-	accounts.update((current) =>
-		current.map((a) => (a.id === id ? { ...a, balance: a.balance + amount } : a)),
-	);
+export async function topUpAccount(id: string, amount: number) {
+	const res = await fetch(`${PUBLIC_SUPABASE_URL}/functions/v1/top-up-account`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'Authorization': `Bearer ${PUBLIC_SUPABASE_ANON_KEY}`,
+		},
+		body: JSON.stringify({
+			account_id: id,
+			amount,
+			currency: 'PHP',
+		}),
+	});
+	if (!res.ok) {
+		const err = await res.json();
+		throw new Error(err.error);
+	}
 }
 
 export function transferAccount(fromId: string, toId: string, amount: number) {

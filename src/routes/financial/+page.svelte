@@ -56,12 +56,16 @@
         showTopUp = true;
     }
 
-    function handleTopUpDone() {
+    async function handleTopUpDone() {
         if (!topUpTarget) return;
         const amount = parseFloat(topUpAmount);
         if (amount <= 0) return;
-        topUpAccount(topUpAccountId, amount);
-        showTopUp = false;
+        try {
+            await topUpAccount(topUpAccountId, amount);
+            showTopUp = false;
+        } catch (e) {
+            console.error("Top-up failed", e);
+        }
     }
 
     async function handleDelete(id: string) {
