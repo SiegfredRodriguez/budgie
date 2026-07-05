@@ -8,11 +8,11 @@
 	}: {
 		show: boolean;
 		onclose: () => void;
-		onsubmit: (data: { icon: string; uploadedIcon: string; name: string; initialValue: string }) => void;
+		onsubmit: (data: { icon: string; uploadFile: File | null; name: string; initialValue: string }) => void;
 	} = $props();
 
 	let icon = $state("wallet");
-	let uploadedIcon = $state("");
+	let uploadFile = $state<File | null>(null);
 	let name = $state("");
 	let initialValue = $state("");
 	let nameInput: HTMLInputElement;
@@ -31,20 +31,20 @@
 		if (e.key === "Escape") onclose();
 	}
 
-	function handleChoose(ic: string, isUpload: boolean) {
-		if (isUpload) {
-			uploadedIcon = ic;
+	function handleChoose(ic: string, isUpload: boolean, file?: File) {
+		if (isUpload && file) {
+			uploadFile = file;
 			icon = "";
 		} else {
 			icon = ic;
-			uploadedIcon = "";
+			uploadFile = null;
 		}
 	}
 
 	function handleSubmit() {
-		onsubmit({ icon, uploadedIcon, name, initialValue });
+		onsubmit({ icon, uploadFile, name, initialValue });
 		icon = "wallet";
-		uploadedIcon = "";
+		uploadFile = null;
 		name = "";
 		initialValue = "";
 	}
@@ -60,7 +60,7 @@
 
 			<div class="field">
 				<span class="field-label">Icon</span>
-				<IconPicker value={icon} uploaded={uploadedIcon} onchoose={handleChoose} />
+				<IconPicker value={icon} uploaded={uploadFile ? "true" : ""} onchoose={handleChoose} />
 			</div>
 
 			<div class="field">

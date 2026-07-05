@@ -6,7 +6,7 @@
 	}: {
 		value: string;
 		uploaded: string;
-		onchoose: (icon: string, isUpload: boolean) => void;
+		onchoose: (icon: string, isUpload: boolean, file?: File) => void;
 	} = $props();
 
 	const icons = ["wallet"] as const;
@@ -16,11 +16,7 @@
 	function handleUpload(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
 		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = () => {
-			onchoose(reader.result as string, true);
-		};
-		reader.readAsDataURL(file);
+		onchoose("", true, file);
 	}
 
 	function triggerUpload() {
