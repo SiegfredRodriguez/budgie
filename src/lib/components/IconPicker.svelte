@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { supabase } from "$lib/supabase";
+	import ImageCropper from "./ImageCropper.svelte";
 
 	let {
 		value = "",
@@ -11,33 +11,25 @@
 
 	const builtin = ["wallet"] as const;
 	let uploadedIcons = $state<string[]>([]);
+	let cropFile = $state<File | null>(null);
 
 	let fileInput: HTMLInputElement;
-	let uploading = $state(false);
-	let uploadError = $state("");
 
-	async function handleUpload(e: Event) {
+	function handleFilePick(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
 		if (!file) return;
-		uploading = true;
-		uploadError = "";
-		try {
-			const ext = file.name.split(".").pop() || "png";
-			const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
-			const { error } = await supabase.storage.from("account-icons").upload(path, file, {
-				contentType: file.type,
-			});
-			if (error) throw error;
-			const { data } = supabase.storage.from("account-icons").getPublicUrl(path);
-			const url = data.publicUrl;
-			uploadedIcons = [...uploadedIcons, url];
-			onchoose(url);
-		} catch (err: any) {
-			uploadError = err?.message || "Upload failed";
-		} finally {
-			uploading = false;
-			fileInput.value = "";
-		}
+		cropFile = file;
+		fileInput.value = "";
+	}
+
+	function handleCrop(url: string) {
+		uploadedIcons = [...uploadedIcons, url];
+		onchoose(url);
+		cropFile = null;
+	}
+
+	function handleCancelCrop() {
+		cropFile = null;
 	}
 
 	function triggerUpload() {
@@ -56,18 +48,15 @@
 			<img src={url} alt="" />
 		</button>
 	{/each}
-	<button class="icon-option icon-add" onclick={triggerUpload} aria-label="add icon" disabled={uploading}>
-		{#if uploading}
-			...
-		{:else}
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-		{/if}
+	<button class="icon-option icon-add" onclick={triggerUpload} aria-label="add icon">
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
 	</button>
 </div>
-{#if uploadError}
-	<div class="upload-error">{uploadError}</div>
+<input type="file" accept="image/*" class="file-input" bind:this={fileInput} onchange={handleFilePick} />
+
+{#if cropFile}
+	<ImageCropper file={cropFile} oncrop={handleCrop} oncancel={handleCancelCrop} />
 {/if}
-<input type="file" accept="image/*" class="file-input" bind:this={fileInput} onchange={handleUpload} />
 
 <style>
 	.icon-picker {
@@ -99,11 +88,6 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.icon-option:disabled {
-		opacity: 0.5;
-		cursor: default;
-	}
-
 	.icon-option.selected {
 		border-color: var(--meta-accent);
 		color: var(--meta-accent);
@@ -124,12 +108,5 @@
 
 	.file-input {
 		display: none;
-	}
-
-	.upload-error {
-		font-size: 0.75rem;
-		color: #ff4d4d;
-		margin-top: -0.25rem;
-		margin-bottom: 0.5rem;
 	}
 </style>
