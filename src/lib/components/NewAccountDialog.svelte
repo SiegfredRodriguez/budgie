@@ -11,7 +11,7 @@
 		onsubmit: (data: { icon: string; uploadedIcon: string; name: string; initialValue: string }) => void;
 	} = $props();
 
-	let icon = $state("");
+	let icon = $state("wallet");
 	let uploadedIcon = $state("");
 	let name = $state("");
 	let initialValue = $state("");
@@ -43,7 +43,7 @@
 
 	function handleSubmit() {
 		onsubmit({ icon, uploadedIcon, name, initialValue });
-		icon = "";
+		icon = "wallet";
 		uploadedIcon = "";
 		name = "";
 		initialValue = "";
