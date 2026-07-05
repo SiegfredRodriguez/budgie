@@ -53,7 +53,7 @@
 
 			<div class="field">
 				<span class="field-label">Icon</span>
-				<IconPicker {value} {uploadedIcon} onchoose={handleChoose} />
+				<IconPicker value={icon} uploaded={uploadedIcon} onchoose={handleChoose} />
 			</div>
 
 			<div class="field">
