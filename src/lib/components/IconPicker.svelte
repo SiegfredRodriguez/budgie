@@ -34,8 +34,10 @@
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
 		</button>
 	{/each}
+	<button class="icon-option" class:selected={!!uploaded} onclick={triggerUpload} aria-label="upload">
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+	</button>
 </div>
-<button class="upload-link" onclick={triggerUpload}>Upload</button>
 <input type="file" accept="image/*" class="file-input" bind:this={fileInput} onchange={handleUpload} />
 
 <style>
@@ -69,17 +71,6 @@
 	.icon-option svg {
 		width: 1.5rem;
 		height: 1.5rem;
-	}
-
-	.upload-link {
-		background: none;
-		border: none;
-		color: var(--meta-accent);
-		font-size: 0.8125rem;
-		font-weight: 600;
-		cursor: pointer;
-		padding: 0.25rem 0;
-		-webkit-tap-highlight-color: transparent;
 	}
 
 	.file-input {
