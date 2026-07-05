@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { supabase } from '$lib/supabase';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 
 export interface Account {
 	id: string;
@@ -55,13 +55,18 @@ export function unsubscribeAccounts() {
 	sub?.unsubscribe();
 }
 
+function authHeaders() {
+	const key = env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+	return {
+		'Content-Type': 'application/json',
+		'Authorization': `Bearer ${key}`,
+	};
+}
+
 export async function addAccount(account: Omit<Account, 'id'>) {
-	const res = await fetch(`${PUBLIC_SUPABASE_URL}/functions/v1/create-account`, {
+	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-account`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${PUBLIC_SUPABASE_ANON_KEY}`,
-		},
+		headers: authHeaders(),
 		body: JSON.stringify({
 			name: account.label,
 			icon: account.icon,
@@ -83,12 +88,9 @@ export async function deleteAccount(id: string) {
 }
 
 export async function topUpAccount(id: string, amount: number) {
-	const res = await fetch(`${PUBLIC_SUPABASE_URL}/functions/v1/top-up-account`, {
+	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/top-up-account`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${PUBLIC_SUPABASE_ANON_KEY}`,
-		},
+		headers: authHeaders(),
 		body: JSON.stringify({
 			account_id: id,
 			amount,
@@ -102,12 +104,9 @@ export async function topUpAccount(id: string, amount: number) {
 }
 
 export async function transferAccount(fromId: string, toId: string, amount: number) {
-	const res = await fetch(`${PUBLIC_SUPABASE_URL}/functions/v1/transfer-account`, {
+	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/transfer-account`, {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${PUBLIC_SUPABASE_ANON_KEY}`,
-		},
+		headers: authHeaders(),
 		body: JSON.stringify({
 			from_id: fromId,
 			to_id: toId,
