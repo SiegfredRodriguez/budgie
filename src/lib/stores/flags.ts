@@ -10,9 +10,7 @@ let client: Awaited<ReturnType<typeof initialize>>;
 export async function initLD(userKey?: string) {
 	if (client) return;
 
-	const ldClientId = env.PUBLIC_LD_CLIENT_SIDE_ID || '6a492c91473ad80a90977934';
-
-	client = initialize(ldClientId, {
+	client = initialize(env.PUBLIC_LD_CLIENT_SIDE_ID, {
 		key: userKey ?? 'anonymous',
 		anonymous: !userKey,
 	});
