@@ -29,6 +29,8 @@
 		ontoggle: () => void;
 	} = $props();
 
+	let overBalance = $derived(!!source && parseFloat(amount) > source.balance);
+
 	function handleOverlay(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
 	}
@@ -72,12 +74,15 @@
 			</div>
 
 			<div class="modal-row">
-				<input class="modal-input" type="number" placeholder="Amount" value={amount} oninput={(e) => onamount((e.target as HTMLInputElement).value)} />
+				<input class="modal-input" type="number" placeholder="Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } onamount(v); }} />
 			</div>
+			{#if overBalance}
+				<div class="modal-error">Transfer amount exceeds available balance</div>
+			{/if}
 
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={ondone}>Transfer</button>
+				<button class="btn btn-primary" onclick={ondone} disabled={overBalance}>Transfer</button>
 			</div>
 		</div>
 	</div>
@@ -265,6 +270,13 @@
 	.modal-input:focus { border-color: var(--meta-accent); }
 	.modal-input::placeholder { color: rgba(255, 255, 255, 0.25); }
 
+	.modal-error {
+		font-size: 0.75rem;
+		color: #ff4444;
+		text-align: left;
+		margin-top: -0.75rem;
+	}
+
 	.modal-actions {
 		display: flex;
 		gap: 0.75rem;
@@ -293,6 +305,11 @@
 	.btn-primary {
 		color: var(--meta-darker);
 		background: var(--meta-accent);
+	}
+
+	.btn-primary:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
 	}
 
 	.btn-secondary {
