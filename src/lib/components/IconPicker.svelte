@@ -1,5 +1,7 @@
 <script lang="ts">
 	import ImageCropper from "./ImageCropper.svelte";
+	import { supabase } from "$lib/supabase";
+	import { PUBLIC_SUPABASE_URL } from "$env/static/public";
 
 	let {
 		value = "",
@@ -14,6 +16,15 @@
 	let cropFile = $state<File | null>(null);
 
 	let fileInput: HTMLInputElement;
+
+	$effect(() => {
+		supabase.storage.from("account-icons").list().then(({ data, error }) => {
+			if (error || !data) return;
+			uploadedIcons = data
+				.filter((f) => f.id) // skip folders
+				.map((f) => `${PUBLIC_SUPABASE_URL}/storage/v1/object/public/account-icons/${f.name}`);
+		});
+	});
 
 	function handleFilePick(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
@@ -86,6 +97,7 @@
 		cursor: pointer;
 		transition: border-color 0.15s, color 0.15s, background 0.15s;
 		-webkit-tap-highlight-color: transparent;
+		overflow: hidden;
 	}
 
 	.icon-option.selected {
@@ -94,15 +106,11 @@
 		background: rgba(64, 224, 208, 0.1);
 	}
 
-	.icon-option svg {
-		width: 1.5rem;
-		height: 1.5rem;
-	}
-
+	.icon-option svg,
 	.icon-img img {
-		width: 1.5rem;
-		height: 1.5rem;
-		border-radius: 0.25rem;
+		width: 100%;
+		height: 100%;
+		border-radius: inherit;
 		object-fit: cover;
 	}
 

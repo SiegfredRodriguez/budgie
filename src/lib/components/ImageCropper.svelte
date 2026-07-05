@@ -20,8 +20,13 @@
 
 	let offsetX = $state(0);
 	let offsetY = $state(0);
+	let zoom = $state(1);
 	let dragging = $state(false);
 	let dragStart = $state({ x: 0, y: 0, ox: 0, oy: 0 });
+	let initialized = $state(false);
+
+	let pointers = $state(new Map<number, { x: number; y: number }>());
+	let pinchStart = $state({ dist: 0, zoom: 1, mx: 0, my: 0 });
 
 	const objectUrl = URL.createObjectURL(file);
 
@@ -48,35 +53,100 @@
 		return () => ro.disconnect();
 	});
 
-	let cropSize = $derived(viewSize.w > 0 && viewSize.h > 0 ? Math.min(viewSize.w - 32, viewSize.h - 32, 512) : 0);
+	let cropSize = $derived(
+		viewSize.w > 0 && viewSize.h > 0
+			? Math.min(viewSize.w - 32, viewSize.h - 32, 512)
+			: 0,
+	);
 
 	let displayScale = $derived(
 		img ? Math.max(cropSize / imgNatural.w, cropSize / imgNatural.h) : 1,
 	);
-	let dispW = $derived(imgNatural.w * displayScale);
-	let dispH = $derived(imgNatural.h * displayScale);
+	let baseW = $derived(imgNatural.w * displayScale);
+	let baseH = $derived(imgNatural.h * displayScale);
+	let dispW = $derived(baseW * zoom);
+	let dispH = $derived(baseH * zoom);
 
 	$effect(() => {
-		if (dispW && dispH && cropSize) {
+		if (!initialized && dispW && dispH && cropSize) {
 			offsetX = -dispW / 2;
 			offsetY = -dispH / 2;
+			initialized = true;
 		}
 	});
 
+	function imgXFromStage(sx: number) {
+		return (sx - viewSize.w / 2 - offsetX) * (imgNatural.w / dispW);
+	}
+	function stageXFromImg(ix: number) {
+		return viewSize.w / 2 + offsetX + ix * (dispW / imgNatural.w);
+	}
+	function imgYFromStage(sy: number) {
+		return (sy - viewSize.h / 2 - offsetY) * (imgNatural.h / dispH);
+	}
+	function stageYFromImg(iy: number) {
+		return viewSize.h / 2 + offsetY + iy * (dispH / imgNatural.h);
+	}
+
 	function handlePointerDown(e: PointerEvent) {
-		dragging = true;
-		dragStart = { x: e.clientX, y: e.clientY, ox: offsetX, oy: offsetY };
-		stageEl.setPointerCapture(e.pointerId);
+		pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+		if (pointers.size === 1) {
+			dragging = true;
+			dragStart = { x: e.clientX, y: e.clientY, ox: offsetX, oy: offsetY };
+		} else if (pointers.size === 2) {
+			dragging = false;
+			const pts = [...pointers.values()];
+			const dx = pts[1].x - pts[0].x;
+			const dy = pts[1].y - pts[0].y;
+			pinchStart = {
+				dist: Math.sqrt(dx * dx + dy * dy),
+				zoom,
+				mx: (pts[0].x + pts[1].x) / 2,
+				my: (pts[0].y + pts[1].y) / 2,
+			};
+		}
 	}
 
 	function handlePointerMove(e: PointerEvent) {
-		if (!dragging) return;
-		offsetX = dragStart.ox + (e.clientX - dragStart.x);
-		offsetY = dragStart.oy + (e.clientY - dragStart.y);
+		if (pointers.has(e.pointerId)) {
+			pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		}
+
+		if (pointers.size === 2) {
+			const pts = [...pointers.values()];
+			const dx = pts[1].x - pts[0].x;
+			const dy = pts[1].y - pts[0].y;
+			const dist = Math.sqrt(dx * dx + dy * dy);
+			const newZoom = Math.max(0.5, Math.min(5, pinchStart.zoom * (dist / pinchStart.dist)));
+
+			const mx = (pts[0].x + pts[1].x) / 2;
+			const my = (pts[0].y + pts[1].y) / 2;
+
+			const imgX = imgXFromStage(mx);
+			const imgY = imgYFromStage(my);
+
+			zoom = newZoom;
+
+			const newOffX = mx - viewSize.w / 2 - imgX * (baseW * newZoom / imgNatural.w);
+			const newOffY = my - viewSize.h / 2 - imgY * (baseH * newZoom / imgNatural.h);
+			offsetX = newOffX;
+			offsetY = newOffY;
+		} else if (pointers.size === 1 && dragging) {
+			offsetX = dragStart.ox + (e.clientX - dragStart.x);
+			offsetY = dragStart.oy + (e.clientY - dragStart.y);
+		}
 	}
 
-	function handlePointerUp() {
-		dragging = false;
+	function handlePointerUp(e: PointerEvent) {
+		pointers.delete(e.pointerId);
+		if (pointers.size < 2) {
+			dragging = pointers.size === 1;
+			if (pointers.size === 1) {
+				const pt = [...pointers.values()][0];
+				dragStart = { x: pt.x, y: pt.y, ox: offsetX, oy: offsetY };
+			}
+		}
 	}
 
 	async function handleCrop() {

@@ -69,11 +69,11 @@
 	.card-icon {
 		width: 2rem;
 		height: 2rem;
-		padding: 0.3125rem;
 		border-radius: 0.5rem;
 		background: var(--meta-darker);
 		color: var(--meta-accent);
 		flex-shrink: 0;
+		overflow: hidden;
 	}
 
 	.card-icon :global(svg) {
