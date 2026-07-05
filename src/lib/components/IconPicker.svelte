@@ -14,11 +14,13 @@
 
 	let fileInput: HTMLInputElement;
 	let uploading = $state(false);
+	let uploadError = $state("");
 
 	async function handleUpload(e: Event) {
 		const file = (e.target as HTMLInputElement).files?.[0];
 		if (!file) return;
 		uploading = true;
+		uploadError = "";
 		try {
 			const ext = file.name.split(".").pop() || "png";
 			const path = `${crypto.randomUUID()}.${ext}`;
@@ -30,8 +32,8 @@
 			const url = data.publicUrl;
 			uploadedIcons = [...uploadedIcons, url];
 			onchoose(url);
-		} catch (err) {
-			console.error("Upload failed", err);
+		} catch (err: any) {
+			uploadError = err?.message || "Upload failed";
 		} finally {
 			uploading = false;
 			fileInput.value = "";
@@ -62,6 +64,9 @@
 		{/if}
 	</button>
 </div>
+{#if uploadError}
+	<div class="upload-error">{uploadError}</div>
+{/if}
 <input type="file" accept="image/*" class="file-input" bind:this={fileInput} onchange={handleUpload} />
 
 <style>
@@ -119,5 +124,12 @@
 
 	.file-input {
 		display: none;
+	}
+
+	.upload-error {
+		font-size: 0.75rem;
+		color: #ff4d4d;
+		margin-top: -0.25rem;
+		margin-bottom: 0.5rem;
 	}
 </style>
