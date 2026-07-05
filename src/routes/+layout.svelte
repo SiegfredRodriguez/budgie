@@ -13,7 +13,7 @@
     let showModal = $state(false);
 
     async function handleCreate(data: { icon: string; uploadedIcon: string; name: string; initialValue: string }) {
-        const icons = ["bank", "piggy", "card"] as const;
+        const icons = ["wallet"] as const;
         const picked = data.uploadedIcon || data.icon || icons[Math.floor(Math.random() * icons.length)];
         try {
             await addAccount({
