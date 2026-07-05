@@ -48,7 +48,7 @@
 				<div class="modal-header-sub">New Balance</div>
 			</div>
 			<div class="modal-row">
-				<input class="modal-input" type="number" placeholder="Top Up Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } onamount(v); }} bind:this={amountInput} />
+				<input class="modal-input" type="number" inputmode="numeric" placeholder="Top Up Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } onamount(v); }} bind:this={amountInput} />
 			</div>
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>

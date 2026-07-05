@@ -74,7 +74,7 @@
 			</div>
 
 			<div class="modal-row">
-				<input class="modal-input" type="number" placeholder="Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } onamount(v); }} />
+				<input class="modal-input" type="number" inputmode="numeric" placeholder="Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } onamount(v); }} />
 			</div>
 			{#if overBalance}
 				<div class="modal-error">Transfer amount exceeds available balance</div>
