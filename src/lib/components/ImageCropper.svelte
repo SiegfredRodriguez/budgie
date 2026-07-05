@@ -55,7 +55,7 @@
 
 	let cropSize = $derived(
 		viewSize.w > 0 && viewSize.h > 0
-			? Math.min(viewSize.w - 32, viewSize.h - 32, 512)
+			? Math.min(viewSize.w - 32, viewSize.h - 32, 256)
 			: 0,
 	);
 
@@ -158,10 +158,10 @@
 		const sourceSize = cropSize * scale;
 
 		const canvas = document.createElement("canvas");
-		canvas.width = 512;
-		canvas.height = 512;
+		canvas.width = 256;
+		canvas.height = 256;
 		const ctx = canvas.getContext("2d")!;
-		ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, 512, 512);
+		ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, 256, 256);
 
 		canvas.toBlob(async (blob) => {
 			if (!blob) return;
