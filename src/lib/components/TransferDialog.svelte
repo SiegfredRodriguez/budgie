@@ -46,12 +46,8 @@
 					<div class="transfer-source-icon"><Icon name={source.icon} /></div>
 					<span class="transfer-source-label">{source.label}</span>
 				</div>
-				<div class="transfer-arrow">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
-				</div>
+				<div class="transfer-balance">{source.currency} {source.balance.toFixed(2)}</div>
 			</div>
-
-			<div class="transfer-balance">{source.currency} {source.balance.toFixed(2)}</div>
 
 			<div class="transfer-endpoint">
 				<button class="transfer-target-btn" onclick={ontoggle}>
@@ -118,7 +114,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.625rem;
+		gap: 0.5rem;
 		padding: 1rem;
 		background: var(--meta-darker);
 		border-radius: 0.75rem;
@@ -146,22 +142,10 @@
 		text-overflow: ellipsis;
 	}
 
-	.transfer-arrow {
-		color: var(--meta-accent);
-		width: 1.25rem;
-		height: 1.25rem;
-	}
-
-	.transfer-arrow svg {
-		width: 100%;
-		height: 100%;
-	}
-
 	.transfer-balance {
 		font-size: 1.125rem;
 		font-weight: 700;
 		color: var(--meta-accent);
-		text-align: center;
 		letter-spacing: 0.01em;
 	}
 
