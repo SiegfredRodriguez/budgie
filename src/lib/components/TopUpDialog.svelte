@@ -23,6 +23,13 @@
 	}
 
 	let result = $derived(target ? target.balance + (parseFloat(amount) || 0) : 0);
+	let amountInput: HTMLInputElement;
+
+	$effect(() => {
+		if (show) {
+			requestAnimationFrame(() => amountInput?.focus());
+		}
+	});
 
 	function handleOverlay(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
@@ -41,7 +48,7 @@
 				<div class="modal-header-sub">New Balance</div>
 			</div>
 			<div class="modal-row">
-				<input class="modal-input" type="number" placeholder="Top Up Amount" value={amount} oninput={(e) => onamount((e.target as HTMLInputElement).value)} />
+				<input class="modal-input" type="number" placeholder="Top Up Amount" value={amount} oninput={(e) => onamount((e.target as HTMLInputElement).value)} bind:this={amountInput} />
 			</div>
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
