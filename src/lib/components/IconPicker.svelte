@@ -23,7 +23,7 @@
 		uploadError = "";
 		try {
 			const ext = file.name.split(".").pop() || "png";
-			const path = `${crypto.randomUUID()}.${ext}`;
+			const path = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
 			const { error } = await supabase.storage.from("account-icons").upload(path, file, {
 				contentType: file.type,
 			});
