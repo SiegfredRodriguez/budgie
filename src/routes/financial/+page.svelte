@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
     import { accounts, topUpAccount, transferAccount, deleteAccount, loadAccounts, subscribeAccounts, unsubscribeAccounts } from "$lib/stores/accounts";
+    import { session } from "$lib/stores/auth";
     import AccountCard from "$lib/components/AccountCard.svelte";
     import TopUpDialog from "$lib/components/TopUpDialog.svelte";
     import TransferDialog from "$lib/components/TransferDialog.svelte";
@@ -42,7 +43,7 @@
         if (amount <= 0) return;
         if (transferSource.balance < amount) return;
         try {
-            await transferAccount(transferSourceId, transferTargetId, amount);
+            await transferAccount(transferSourceId, transferTargetId, amount, $session!.user.id);
             showTransfer = false;
         } catch (e) {
             console.error("Transfer failed", e);
@@ -65,7 +66,7 @@
         const amount = parseFloat(topUpAmount);
         if (amount <= 0) return;
         try {
-            await topUpAccount(topUpAccountId, amount);
+            await topUpAccount(topUpAccountId, amount, $session!.user.id);
             showTopUp = false;
         } catch (e) {
             console.error("Top-up failed", e);

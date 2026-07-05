@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { name, icon, currency, balance } = await req.json();
+  const { name, icon, currency, balance, user_id } = await req.json();
 
   if (!name || typeof name !== "string") {
     return new Response(JSON.stringify({ error: "name is required" }), {
@@ -32,10 +32,18 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   );
 
+  if (!user_id || typeof user_id !== "string") {
+    return new Response(JSON.stringify({ error: "user_id is required" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const { data: account, error: insertError } = await supabase.rpc(
     "create_account_with_transaction",
     {
       p_name: name,
+      p_user_id: user_id,
       p_icon: icon || "bank",
       p_currency: currency || "PHP",
       p_balance: typeof balance === "number" ? balance : 0,

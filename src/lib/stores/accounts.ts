@@ -63,7 +63,7 @@ function authHeaders() {
 	};
 }
 
-export async function addAccount(account: Omit<Account, 'id'>) {
+export async function addAccount(account: Omit<Account, 'id'>, userId: string) {
 	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-account`, {
 		method: 'POST',
 		headers: authHeaders(),
@@ -72,6 +72,7 @@ export async function addAccount(account: Omit<Account, 'id'>) {
 			icon: account.icon,
 			currency: account.currency,
 			balance: account.balance,
+			user_id: userId,
 		}),
 	});
 	if (!res.ok) {
@@ -87,7 +88,7 @@ export async function deleteAccount(id: string) {
 	if (error) throw new Error(error.message);
 }
 
-export async function topUpAccount(id: string, amount: number) {
+export async function topUpAccount(id: string, amount: number, userId: string) {
 	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/top-up-account`, {
 		method: 'POST',
 		headers: authHeaders(),
@@ -95,6 +96,7 @@ export async function topUpAccount(id: string, amount: number) {
 			account_id: id,
 			amount,
 			currency: 'PHP',
+			user_id: userId,
 		}),
 	});
 	if (!res.ok) {
@@ -103,7 +105,7 @@ export async function topUpAccount(id: string, amount: number) {
 	}
 }
 
-export async function transferAccount(fromId: string, toId: string, amount: number) {
+export async function transferAccount(fromId: string, toId: string, amount: number, userId: string) {
 	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/transfer-account`, {
 		method: 'POST',
 		headers: authHeaders(),
@@ -112,6 +114,7 @@ export async function transferAccount(fromId: string, toId: string, amount: numb
 			to_id: toId,
 			amount,
 			currency: 'PHP',
+			user_id: userId,
 		}),
 	});
 	if (!res.ok) {

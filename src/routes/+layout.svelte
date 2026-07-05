@@ -24,19 +24,22 @@
 
 		if (!$session && authProtected) {
 			goto("/login");
-		} else if ($session && $page.url.pathname === "/") {
+		} else if ($session && ($page.url.pathname === "/" || $page.url.pathname === "/login")) {
 			goto("/financial");
 		}
 	});
 
 	async function handleCreate(data: { icon: string; name: string; initialValue: string }) {
 		try {
-			await addAccount({
-				icon: data.icon || "wallet",
-				label: data.name || "Untitled Account",
-				currency: "PHP",
-				balance: parseFloat(data.initialValue) || 0,
-			});
+			await addAccount(
+				{
+					icon: data.icon || "wallet",
+					label: data.name || "Untitled Account",
+					currency: "PHP",
+					balance: parseFloat(data.initialValue) || 0,
+				},
+				$session!.user.id,
+			);
 		} catch (e) {
 			console.error("Failed to create account", e);
 			return;

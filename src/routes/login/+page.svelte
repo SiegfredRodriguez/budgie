@@ -46,8 +46,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		min-height: 100vh;
+		height: 100vh;
+		height: 100dvh;
 		padding: 1.5rem;
+		box-sizing: border-box;
 	}
 
 	.login-card {

@@ -1,13 +1,19 @@
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE tablename = 'buckets'
-    AND policyname = 'anon select account-icons bucket'
-  ) THEN
-    CREATE POLICY "anon select account-icons bucket"
-    ON storage.buckets FOR SELECT
-    TO anon
-    USING (id = 'account-icons');
-  END IF;
-END $$;
+-- Grant storage access to both anon and authenticated roles
+DROP POLICY IF EXISTS "anon select account-icons bucket" ON storage.buckets;
+DROP POLICY IF EXISTS "anon upload account icons" ON storage.objects;
+DROP POLICY IF EXISTS "anon select account icons" ON storage.objects;
+
+CREATE POLICY "storage select account-icons bucket"
+ON storage.buckets FOR SELECT
+TO anon, authenticated
+USING (id = 'account-icons');
+
+CREATE POLICY "storage upload account icons"
+ON storage.objects FOR INSERT
+TO anon, authenticated
+WITH CHECK (bucket_id = 'account-icons');
+
+CREATE POLICY "storage select account icons"
+ON storage.objects FOR SELECT
+TO anon, authenticated
+USING (bucket_id = 'account-icons');

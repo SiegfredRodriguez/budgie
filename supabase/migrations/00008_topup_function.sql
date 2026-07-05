@@ -1,6 +1,7 @@
 create or replace function top_up_account(
     p_account_id uuid,
     p_amount numeric,
+    p_user_id uuid,
     p_currency text default 'PHP',
     p_description text default null
 ) returns json
@@ -10,6 +11,10 @@ as $$
 declare
     updated_account accounts;
 begin
+    if (select user_id from accounts where id = p_account_id) != p_user_id then
+        raise exception 'Account does not belong to user';
+    end if;
+
     update accounts
     set balance = balance + p_amount,
         updated_at = now()

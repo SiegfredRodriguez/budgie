@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { account_id, amount, currency, description } = await req.json();
+  const { account_id, amount, currency, description, user_id } = await req.json();
 
   if (!account_id || typeof account_id !== "string") {
     return new Response(JSON.stringify({ error: "account_id is required" }), {
@@ -34,6 +34,13 @@ Deno.serve(async (req) => {
     });
   }
 
+  if (!user_id || typeof user_id !== "string") {
+    return new Response(JSON.stringify({ error: "user_id is required" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
@@ -44,6 +51,7 @@ Deno.serve(async (req) => {
     {
       p_account_id: account_id,
       p_amount: amount,
+      p_user_id: user_id,
       p_currency: currency || "PHP",
       p_description: description || null,
     },

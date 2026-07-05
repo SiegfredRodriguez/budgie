@@ -2,6 +2,7 @@ create or replace function transfer_between_accounts(
     p_from_id uuid,
     p_to_id uuid,
     p_amount numeric,
+    p_user_id uuid,
     p_currency text default 'PHP',
     p_description text default null
 ) returns json
@@ -13,6 +14,10 @@ declare
     to_account accounts;
     result json;
 begin
+    if (select user_id from accounts where id = p_from_id) != p_user_id then
+        raise exception 'Source account does not belong to user';
+    end if;
+
     -- lock and deduct from source
     update accounts
     set balance = balance - p_amount,

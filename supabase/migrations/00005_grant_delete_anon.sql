@@ -1,1 +1,1 @@
-grant delete on public.accounts to anon;
+grant delete on public.accounts to anon, authenticated;
