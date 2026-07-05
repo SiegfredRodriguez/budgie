@@ -2,7 +2,9 @@
 	let { name = "wallet" }: { name: string } = $props();
 </script>
 
-{#if name === "wallet"}
+{#if name.startsWith("http")}
+	<img src={name} alt="" />
+{:else if name === "wallet"}
 	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
 {:else if name === "bank"}
 	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M5 6l7-3 7 3"/><path d="M4 10v11"/><path d="M20 10v11"/><path d="M8 14v3"/><path d="M12 14v3"/><path d="M16 14v3"/></svg>
@@ -13,8 +15,13 @@
 {/if}
 
 <style>
-	svg {
+	svg, img {
 		width: 100%;
 		height: 100%;
+	}
+
+	img {
+		border-radius: 0.25rem;
+		object-fit: cover;
 	}
 </style>
