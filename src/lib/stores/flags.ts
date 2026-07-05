@@ -1,6 +1,9 @@
 import { writable } from 'svelte/store';
 import { initialize } from 'launchdarkly-js-client-sdk';
-import { PUBLIC_LD_CLIENT_ID } from '$env/static/public';
+import { dev } from '$app/environment';
+
+const LOCAL_LD_CLIENT_ID = '6a492c91473ad80a90977934';
+const PROD_LD_CLIENT_ID = 'PASTE_YOUR_PROD_CLIENT_ID_HERE';
 
 export const flags = writable<Record<string, boolean | string | number>>({});
 export const ldReady = writable(false);
@@ -10,7 +13,9 @@ let client: Awaited<ReturnType<typeof initialize>>;
 export async function initLD(userKey?: string) {
 	if (client) return;
 
-	client = initialize(PUBLIC_LD_CLIENT_ID, {
+	const ldClientId = dev ? LOCAL_LD_CLIENT_ID : PROD_LD_CLIENT_ID;
+
+	client = initialize(ldClientId, {
 		key: userKey ?? 'anonymous',
 		anonymous: !userKey,
 	});
