@@ -1,7 +1,13 @@
 <script lang="ts">
-	import Icon from "./Icon.svelte";
-
-	let { value = "", uploaded = "", onchoose }: { value: string; uploaded: string; onchoose: (icon: string, isUpload: boolean) => void } = $props();
+	let {
+		value = "",
+		uploaded = "",
+		onchoose,
+	}: {
+		value: string;
+		uploaded: string;
+		onchoose: (icon: string, isUpload: boolean) => void;
+	} = $props();
 
 	const icons = ["bank", "piggy", "card"] as const;
 
@@ -16,29 +22,35 @@
 		};
 		reader.readAsDataURL(file);
 	}
+
+	function triggerUpload() {
+		fileInput?.click();
+	}
 </script>
 
 <div class="icon-picker">
 	{#each icons as ic}
 		<button class="icon-option" class:selected={value === ic} onclick={() => onchoose(ic, false)} aria-label={ic}>
-			<Icon name={ic} />
+			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+				{#if ic === "bank"}
+					<path d="M3 21h18"/><path d="M3 10h18"/><path d="M5 6l7-3 7 3"/><path d="M4 10v11"/><path d="M20 10v11"/><path d="M8 14v3"/><path d="M12 14v3"/><path d="M16 14v3"/>
+				{:else if ic === "piggy"}
+					<path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.4-1 1.4-1.8"/><path d="M21 5.5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/><line x1="7" y1="11" x2="7" y2="11.01" stroke-width="3" stroke-linecap="round"/>
+				{:else if ic === "card"}
+					<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/>
+				{/if}
+			</svg>
 		</button>
 	{/each}
-
-	<button class="icon-option upload-option" class:selected={!!uploaded} onclick={() => fileInput?.click()} aria-label="Upload custom icon">
-		{#if uploaded}
-			<img class="upload-preview" src={uploaded} alt="" />
-		{:else}
-			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-		{/if}
-	</button>
 </div>
+<button class="upload-link" onclick={triggerUpload}>Upload</button>
 <input type="file" accept="image/*" class="file-input" bind:this={fileInput} onchange={handleUpload} />
 
 <style>
 	.icon-picker {
 		display: flex;
 		gap: 0.625rem;
+		margin-bottom: 0.5rem;
 	}
 
 	.icon-option {
@@ -67,15 +79,15 @@
 		height: 1.5rem;
 	}
 
-	.upload-option {
-		margin-left: auto;
-	}
-
-	.upload-preview {
-		width: 2rem;
-		height: 2rem;
-		border-radius: 0.375rem;
-		object-fit: cover;
+	.upload-link {
+		background: none;
+		border: none;
+		color: var(--meta-accent);
+		font-size: 0.8125rem;
+		font-weight: 600;
+		cursor: pointer;
+		padding: 0.25rem 0;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.file-input {

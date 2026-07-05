@@ -15,6 +15,13 @@
 	let uploadedIcon = $state("");
 	let name = $state("");
 	let initialValue = $state("");
+	let nameInput: HTMLInputElement;
+
+	$effect(() => {
+		if (show) {
+			requestAnimationFrame(() => nameInput?.focus());
+		}
+	});
 
 	function handleOverlay(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
@@ -58,12 +65,12 @@
 
 			<div class="field">
 				<label class="field-label" for="name">Account Name</label>
-				<input id="name" class="field-input" type="text" placeholder="e.g. Savings Account" bind:value={name} />
+				<input id="name" class="field-input" type="text" placeholder="e.g. Savings Account" bind:value={name} bind:this={nameInput} />
 			</div>
 
 			<div class="field">
 				<label class="field-label" for="initial">Initial Value</label>
-				<input id="initial" class="field-input" type="number" placeholder="0" bind:value={initialValue} />
+				<input id="initial" class="field-input" type="number" placeholder="PHP 0.00" bind:value={initialValue} />
 			</div>
 
 			<button class="submit-btn" onclick={handleSubmit}>Create Account</button>
