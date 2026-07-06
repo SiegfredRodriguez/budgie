@@ -9,7 +9,13 @@ export const authReady = writable(false);
 export async function initAuth() {
 	const { data: { session: s } } = await supabase.auth.getSession();
 
-	if (dev && !s) {
+	if (dev) {
+		if (s) {
+			const { error } = await supabase.auth.getUser();
+			if (error) {
+				await supabase.auth.signOut();
+			}
+		}
 		try {
 			const { data } = await supabase.auth.signInWithPassword({
 				email: 'dev@example.com',
