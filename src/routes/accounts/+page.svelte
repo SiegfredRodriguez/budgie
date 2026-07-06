@@ -101,7 +101,7 @@
 <div class="scroller" onscroll={handleScroll}>
     <div class="hero" style="height: {headerHeight}px; transform: translateY({Math.max(scrollTop * 0.3, 0)}px)">
         <div class="hero-overlay"></div>
-        <img class="hero-img" src="https://picsum.photos/seed/budgie/860/500" alt="" width="860" height="500" />
+        <img class="hero-img" src="/hero-accounts.png" alt="" width="860" height="500" />
         <div class="summary">
             <div class="summary-total">{formatBalance(total, "PHP")}</div>
             <div class="summary-sub">{count} {count === 1 ? "account" : "accounts"}</div>

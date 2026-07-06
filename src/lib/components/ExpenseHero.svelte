@@ -14,7 +14,7 @@
 
 <div class="hero" style="height: {height}px; transform: translateY({Math.max(scrollTop * 0.3, 0)}px)">
 	<div class="hero-overlay"></div>
-	<img class="hero-img" src="https://picsum.photos/seed/expense/860/500" alt="" width="860" height="500" />
+	<img class="hero-img" src="/hero-expenses.png" alt="" width="860" height="500" />
 	<div class="summary">
 		<div class="summary-total">{total}</div>
 		<div class="summary-sub">{count} {count === 1 ? "expense" : "expenses"} this month</div>
