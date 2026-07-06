@@ -21,6 +21,7 @@
 	let busy = $state(false);
 
 	let selectedSource = $derived(accounts.find((a) => a.id === sourceId));
+	let amountInput: HTMLInputElement | undefined = $state();
 
 	function fmt(n: number, c: string): string {
 		const p = Math.abs(n).toFixed(2).split(".");
@@ -32,10 +33,11 @@
 		if (show) {
 			amount = "";
 			label = "";
-			sourceId = "";
+			sourceId = accounts.length > 0 ? accounts[0].id : "";
 			showSourceDropdown = false;
 			dateStr = new Date().toISOString().slice(0, 10);
 			busy = false;
+			amountInput?.focus();
 		}
 	});
 
@@ -74,7 +76,7 @@
 	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
 			<div class="modal-row">
-				<input class="modal-input" type="number" inputmode="numeric" placeholder="Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } amount = v; }} />
+				<input class="modal-input" type="number" inputmode="numeric" placeholder="Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } amount = v; }} bind:this={amountInput} />
 			</div>
 
 			<div class="modal-row">
@@ -173,6 +175,9 @@
 
 	.modal-input:focus { border-color: var(--meta-accent); }
 	.modal-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+	.modal-input::-webkit-outer-spin-button,
+	.modal-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+	.modal-input[type="number"] { -moz-appearance: textfield; }
 
 	.source-endpoint {
 		width: 100%;
