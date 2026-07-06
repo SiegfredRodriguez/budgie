@@ -51,6 +51,7 @@ create or replace function create_account_with_transaction(
     p_balance numeric default 0
 ) returns json
 language plpgsql
+set search_path = 'public'
 security definer
 as $$
 declare

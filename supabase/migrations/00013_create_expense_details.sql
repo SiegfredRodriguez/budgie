@@ -35,6 +35,7 @@ create or replace function create_expense(
     p_currency text default 'PHP'
 ) returns json
 language plpgsql
+set search_path = 'public'
 security definer
 as $$
 declare
