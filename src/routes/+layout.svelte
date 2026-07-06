@@ -4,7 +4,9 @@
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
 	import { goto } from "$app/navigation";
-	import { addAccount } from "$lib/stores/accounts";
+	import { initAccounts, addAccount } from "$lib/stores/accounts";
+	import { initExpenses } from "$lib/stores/expenses";
+	import { bootstrapReady } from "$lib/stores/init";
 	import { initLD } from "$lib/stores/flags";
 	import { session, authReady, initAuth } from "$lib/stores/auth";
 	import TabBar from "$lib/components/TabBar.svelte";
@@ -14,6 +16,7 @@
 
 	let showModal = $state(false);
 	let splashDone = $state(false);
+	let splashStart = $state(Date.now());
 
 	let authProtected = $derived.by(() => {
 		const path = $page.url.pathname;
@@ -27,6 +30,14 @@
 			goto("/login");
 		} else if ($session && ($page.url.pathname === "/" || $page.url.pathname === "/login")) {
 			goto("/expenses");
+		}
+	});
+
+	$effect(() => {
+		if ($bootstrapReady && splashStart > 0) {
+			const elapsed = Date.now() - splashStart;
+			const remaining = Math.max(0, 2000 - elapsed);
+			setTimeout(() => splashDone = true, remaining);
 		}
 	});
 
@@ -49,9 +60,10 @@
 	}
 
 	onMount(() => {
-		setTimeout(() => splashDone = true, 2000);
 		initAuth();
 		initLD();
+		initAccounts();
+		initExpenses();
 		if ("serviceWorker" in navigator) {
 			const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
 			navigator.serviceWorker.register(swUrl, {
@@ -67,11 +79,7 @@
 	<link rel="apple-touch-icon" href="/pwa-192x192.png" />
 </svelte:head>
 
-{#if !$authReady}
-	<div class="splash">
-		<div class="spinner" />
-	</div>
-{:else if !$session}
+{#if !$session}
 	<main class="content">
 		{@render children()}
 	</main>
@@ -100,26 +108,6 @@
 </div>
 
 <style>
-	.splash {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		min-height: 100vh;
-	}
-
-	.spinner {
-		width: 1.5rem;
-		height: 1.5rem;
-		border: 0.125rem solid rgba(255, 255, 255, 0.15);
-		border-top-color: var(--meta-accent);
-		border-radius: 50%;
-		animation: spin 0.6s linear infinite;
-	}
-
-	@keyframes spin {
-		to { transform: rotate(360deg); }
-	}
-
 	.content {
 		flex: 1;
 		overflow-y: auto;

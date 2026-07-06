@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
-    import { accounts, topUpAccount, transferAccount, deleteAccount, loadAccounts, subscribeAccounts, unsubscribeAccounts } from "$lib/stores/accounts";
+    import { onMount } from "svelte";
+    import { accounts, topUpAccount, transferAccount, deleteAccount } from "$lib/stores/accounts";
     import { session } from "$lib/stores/auth";
     import AccountCard from "$lib/components/AccountCard.svelte";
     import TopUpDialog from "$lib/components/TopUpDialog.svelte";
@@ -95,12 +95,6 @@
 
     onMount(() => {
         scroller = document.querySelector(".scroller") as HTMLElement;
-        loadAccounts();
-        subscribeAccounts();
-    });
-
-    onDestroy(() => {
-        unsubscribeAccounts();
     });
 </script>
 

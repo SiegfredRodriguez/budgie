@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { accounts, accountsLoading, loadAccounts } from "$lib/stores/accounts";
+	import { accounts, accountsLoading } from "$lib/stores/accounts";
+	import { expenses, loadExpenses } from "$lib/stores/expenses";
 	import { session } from "$lib/stores/auth";
 	import { env } from '$env/dynamic/public';
-	import { supabase } from '$lib/supabase';
 	import ExpenseHero from "$lib/components/ExpenseHero.svelte";
 	import ExpenseItem from "$lib/components/ExpenseItem.svelte";
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
@@ -12,51 +11,17 @@
 	const currentMonth = now.getMonth();
 	const currentYear = now.getFullYear();
 
-	interface Expense {
-		id: string;
-		amount: number;
-		date: string;
-		label: string;
-		accountId: string;
-		currency: string;
-		createdAt: string;
-	}
-
-	let expenses = $state<Expense[]>([]);
-
-	async function loadExpenses() {
-		const { data, error } = await supabase
-			.from('transactions')
-			.select('amount, currency, account_id, created_at, expense_details!inner(id, label, date)')
-			.eq('type', 'EXPENSE');
-		if (error || !data) return;
-		expenses = data.map((t: any) => ({
-			id: t.expense_details.id,
-			amount: Math.abs(t.amount),
-			label: t.expense_details.label,
-			date: t.expense_details.date,
-			accountId: t.account_id,
-			currency: t.currency,
-			createdAt: t.created_at,
-		})).sort((a, b) => b.date.localeCompare(a.date));
-	}
-
-	onMount(() => {
-		loadExpenses();
-		loadAccounts();
-	});
-
 	function isCurrentMonth(d: string) {
 		const date = new Date(d + 'T00:00:00');
 		return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
 	}
 
 	let currentMonthExpenses = $derived(
-		expenses
+		$expenses
 			.filter((e) => isCurrentMonth(e.date))
 			.reduce((sum, e) => sum + e.amount, 0),
 	);
-	let currentMonthCount = $derived(expenses.filter((e) => isCurrentMonth(e.date)).length);
+	let currentMonthCount = $derived($expenses.filter((e) => isCurrentMonth(e.date)).length);
 
 	function fmt(n: number, c = "PHP"): string {
 		const abs = Math.abs(n);
@@ -105,7 +70,6 @@
 		}
 		closeDialog();
 		await loadExpenses();
-		await loadAccounts();
 	}
 </script>
 
@@ -118,7 +82,7 @@
 	<ExpenseHero total={fmt(currentMonthExpenses)} count={currentMonthCount} {scrollTop} height={headerHeight} />
 
 	<div class="list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-		{#each expenses as item}
+		{#each $expenses as item}
 			<ExpenseItem label={item.label} formatted={`-${fmt(item.amount, item.currency)}`} current={isCurrentMonth(item.date)} />
 		{/each}
 	</div>

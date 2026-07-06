@@ -2,6 +2,7 @@ import { writable } from 'svelte/store';
 import { supabase } from '$lib/supabase';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { env } from '$env/dynamic/public';
+import { accountsReady } from './init';
 
 export interface Account {
 	id: string;
@@ -22,18 +23,22 @@ function mapRow(r: any): Account {
 
 export async function loadAccounts() {
 	accountsLoading.set(true);
-	const { data, error } = await supabase
-		.from('accounts')
-		.select('id,name,icon,currency,balance')
-		.order('created_at', { ascending: true });
-	if (error) { accountsLoading.set(false); return; }
-	accounts.set((data ?? []).map(mapRow));
-	accountsLoading.set(false);
+	try {
+		const { data, error } = await supabase
+			.from('accounts')
+			.select('id,name,icon,currency,balance')
+			.order('created_at', { ascending: true });
+		if (error) return;
+		accounts.set((data ?? []).map(mapRow));
+	} finally {
+		accountsLoading.set(false);
+	}
 }
 
-let sub: Awaited<ReturnType<typeof supabase.channel>>;
+let sub: Awaited<ReturnType<typeof supabase.channel>> | undefined;
 
-export function subscribeAccounts() {
+function subscribeAccounts() {
+	if (sub) return;
 	sub = supabase
 		.channel('accounts-changes')
 		.on(
@@ -49,13 +54,22 @@ export function subscribeAccounts() {
 				}
 			},
 		)
-		.subscribe((status) => {
-			if (status === 'SUBSCRIBED') loadAccounts();
-		});
+		.subscribe();
 }
 
 export function unsubscribeAccounts() {
 	sub?.unsubscribe();
+	sub = undefined;
+}
+
+export async function initAccounts() {
+	subscribeAccounts();
+	try {
+		await loadAccounts();
+	} catch (e) {
+		console.error('Failed to load accounts', e);
+	}
+	accountsReady.set(true);
 }
 
 function authHeaders() {
