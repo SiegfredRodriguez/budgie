@@ -8,7 +8,7 @@
 		onsubmit,
 	}: {
 		show: boolean;
-		accounts: Array<{ id: string; icon: string; label: string }>;
+		accounts: Array<{ id: string; icon: string; label: string; balance: number; currency: string }>;
 		onclose: () => void;
 		onsubmit: (data: { account_id: string; amount: number; label: string; date: string }) => void;
 	} = $props();
@@ -17,10 +17,16 @@
 	let label = $state("");
 	let sourceId = $state("");
 	let showSourceDropdown = $state(false);
-	let dateStr = $state("");
+	let dateStr = $state(new Date().toISOString().slice(0, 10));
 	let busy = $state(false);
 
 	let selectedSource = $derived(accounts.find((a) => a.id === sourceId));
+
+	function fmt(n: number, c: string): string {
+		const p = Math.abs(n).toFixed(2).split(".");
+		p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		return `${c} ${p[0]}.${p[1]}`;
+	}
 
 	$effect(() => {
 		if (show) {
@@ -28,7 +34,7 @@
 			label = "";
 			sourceId = "";
 			showSourceDropdown = false;
-			dateStr = "";
+			dateStr = new Date().toISOString().slice(0, 10);
 			busy = false;
 		}
 	});
@@ -82,7 +88,12 @@
 							<Icon name={selectedSource.icon} />
 						{/if}
 					</div>
-					<span class="source-btn-label" class:source-placeholder={!selectedSource}>{selectedSource ? selectedSource.label : "Select source account"}</span>
+					<div class="source-btn-text">
+						<span class="source-btn-label" class:source-placeholder={!selectedSource}>{selectedSource ? selectedSource.label : "Select source account"}</span>
+						{#if selectedSource}
+							<span class="source-btn-balance">{fmt(selectedSource.balance, selectedSource.currency)}</span>
+						{/if}
+					</div>
 					<svg class="source-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
 				</button>
 				{#if showSourceDropdown}
@@ -90,7 +101,10 @@
 						{#each accounts as acct}
 							<div class="source-option" role="button" tabindex="0" onclick={() => selectSource(acct.id)} onkeydown={(e) => e.key === "Enter" && selectSource(acct.id)}>
 								<div class="source-option-icon"><Icon name={acct.icon} /></div>
-								<span class="source-option-label">{acct.label}</span>
+								<div class="source-option-text">
+									<span class="source-option-label">{acct.label}</span>
+									<span class="source-option-balance">{fmt(acct.balance, acct.currency)}</span>
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -188,10 +202,26 @@
 		flex-shrink: 0;
 	}
 
+	.source-btn-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+
 	.source-btn-label {
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--meta-light);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: left;
+	}
+
+	.source-btn-balance {
+		font-size: 0.6875rem;
+		font-weight: 500;
+		color: var(--meta-silver);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -243,10 +273,26 @@
 		flex-shrink: 0;
 	}
 
+	.source-option-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+
 	.source-option-label {
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--meta-light);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: left;
+	}
+
+	.source-option-balance {
+		font-size: 0.6875rem;
+		font-weight: 500;
+		color: var(--meta-silver);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;

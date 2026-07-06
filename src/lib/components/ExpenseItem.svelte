@@ -1,18 +1,18 @@
 <script lang="ts">
 	let {
 		label,
-		amount,
+		formatted,
 		current,
 	}: {
 		label: string;
-		amount: number;
+		formatted: string;
 		current: boolean;
 	} = $props();
 </script>
 
 <div class="item" class:current>
 	<span class="item-label">{label}</span>
-	<span class="amount">-{amount.toFixed(2)}</span>
+	<span class="amount">{formatted}</span>
 </div>
 
 <style>

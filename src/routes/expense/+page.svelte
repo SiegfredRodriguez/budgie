@@ -18,6 +18,7 @@
 		date: string;
 		label: string;
 		accountId: string;
+		currency: string;
 		createdAt: string;
 	}
 
@@ -26,9 +27,8 @@
 	async function loadExpenses() {
 		const { data, error } = await supabase
 			.from('transactions')
-			.select('amount, account_id, created_at, expense_details!inner(id, label, date)')
-			.eq('type', 'EXPENSE')
-			.order('created_at', { ascending: false });
+			.select('amount, currency, account_id, created_at, expense_details!inner(id, label, date)')
+			.eq('type', 'EXPENSE');
 		if (error || !data) return;
 		expenses = data.map((t: any) => ({
 			id: t.expense_details.id,
@@ -36,8 +36,9 @@
 			label: t.expense_details.label,
 			date: t.expense_details.date,
 			accountId: t.account_id,
+			currency: t.currency,
 			createdAt: t.created_at,
-		}));
+		})).sort((a, b) => b.date.localeCompare(a.date));
 	}
 
 	onMount(() => {
@@ -56,11 +57,11 @@
 	);
 	let currentMonthCount = $derived(expenses.filter((e) => isCurrentMonth(e.date)).length);
 
-	function fmt(n: number): string {
+	function fmt(n: number, c = "PHP"): string {
 		const abs = Math.abs(n);
 		const p = abs.toFixed(2).split(".");
 		p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-		return `PHP ${n < 0 ? "-" : ""}${p[0]}.${p[1]}`;
+		return `${c} ${p[0]}.${p[1]}`;
 	}
 
 	let scrollTop = $state(0);
@@ -115,7 +116,7 @@
 
 	<div class="list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
 		{#each expenses as item}
-			<ExpenseItem label={item.label} amount={item.amount} current={isCurrentMonth(item.date)} />
+			<ExpenseItem label={item.label} formatted={`-${fmt(item.amount, item.currency)}`} current={isCurrentMonth(item.date)} />
 		{/each}
 	</div>
 </div>
