@@ -1,38 +1,58 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Icon from "$lib/components/Icon.svelte";
 	import { accounts } from "$lib/stores/accounts";
+	import { session } from "$lib/stores/auth";
+	import { env } from '$env/dynamic/public';
+	import { supabase } from '$lib/supabase';
 
 	const now = new Date();
 	const currentMonth = now.getMonth();
 	const currentYear = now.getFullYear();
 
-	function randomDate(): Date {
-		const d = new Date(currentYear, currentMonth, 1);
-		const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-		const day = Math.floor(Math.random() * 35) - 5;
-		d.setDate(day);
-		return d;
+	interface Expense {
+		id: string;
+		amount: number;
+		date: string;
+		label: string;
+		accountId: string;
+		createdAt: string;
 	}
 
-	const labels = ["Groceries", "Transport", "Dining", "Utilities", "Entertainment", "Shopping", "Health", "Education", "Rent", "Insurance", "Subscriptions", "Coffee", "Parking", "Phone", "Internet", "Streaming", "Clothing", "Gifts", "Travel", "Fitness"];
+	let expenses = $state<Expense[]>([]);
 
-	const dummy = Array.from({ length: 20 }, (_, i) => {
-		const d = randomDate();
-		return {
-			id: i,
-			amount: -(Math.random() * 5000 + 50),
-			date: d,
-			label: labels[i],
-			isCurrentMonth: d.getMonth() === currentMonth && d.getFullYear() === currentYear,
-		};
+	async function loadExpenses() {
+		const { data, error } = await supabase
+			.from('transactions')
+			.select('amount, account_id, created_at, expense_details!inner(id, label, date)')
+			.eq('type', 'EXPENSE')
+			.order('created_at', { ascending: false });
+		if (error || !data) return;
+		expenses = data.map((t: any) => ({
+			id: t.expense_details.id,
+			amount: Math.abs(t.amount),
+			label: t.expense_details.label,
+			date: t.expense_details.date,
+			accountId: t.account_id,
+			createdAt: t.created_at,
+		}));
+	}
+
+	onMount(() => {
+		loadExpenses();
 	});
 
+	function isCurrentMonth(d: string) {
+		const date = new Date(d + 'T00:00:00');
+		return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+	}
+
 	let currentMonthExpenses = $derived(
-		dummy
-			.filter((e) => e.isCurrentMonth)
+		expenses
+			.filter((e) => isCurrentMonth(e.date))
 			.reduce((sum, e) => sum + e.amount, 0),
 	);
-	let currentMonthCount = $derived(dummy.filter((e) => e.isCurrentMonth).length);
+	let currentMonthCount = $derived(expenses.filter((e) => isCurrentMonth(e.date)).length);
 
 	function fmt(n: number): string {
 		const abs = Math.abs(n);
@@ -88,10 +108,31 @@
 
 	async function handleDone() {
 		if (busy) return;
+		if (!amount || !label || !sourceId || !dateStr) return;
 		busy = true;
 		try {
-			await new Promise((r) => setTimeout(r, 500));
+			const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-expense`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${env.PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
+				},
+				body: JSON.stringify({
+					account_id: sourceId,
+					amount: parseFloat(amount),
+					label,
+					date: dateStr,
+					user_id: $session!.user.id,
+				}),
+			});
+			if (!res.ok) {
+				const err = await res.json();
+				throw new Error(err.error);
+			}
 			closeDialog();
+			await loadExpenses();
+		} catch (e) {
+			alert(e instanceof Error ? e.message : 'Failed to create expense');
 		} finally {
 			busy = false;
 		}
@@ -114,10 +155,10 @@
 	</div>
 
 	<div class="list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-		{#each dummy as item}
-			<div class="item" class:current={item.isCurrentMonth}>
+		{#each expenses as item}
+			<div class="item" class:current={isCurrentMonth(item.date)}>
 				<span class="item-label">{item.label}</span>
-				<span class="amount">{item.amount.toFixed(2)}</span>
+				<span class="amount">-{item.amount.toFixed(2)}</span>
 			</div>
 		{/each}
 	</div>
