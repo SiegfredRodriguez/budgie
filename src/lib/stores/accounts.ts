@@ -14,18 +14,21 @@ export interface Account {
 const initial: Account[] = [];
 
 export const accounts = writable<Account[]>(initial);
+export const accountsLoading = writable(false);
 
 function mapRow(r: any): Account {
 	return { id: r.id, icon: r.icon, label: r.name, currency: r.currency, balance: r.balance };
 }
 
 export async function loadAccounts() {
+	accountsLoading.set(true);
 	const { data, error } = await supabase
 		.from('accounts')
 		.select('id,name,icon,currency,balance')
 		.order('created_at', { ascending: true });
-	if (error) return;
+	if (error) { accountsLoading.set(false); return; }
 	accounts.set((data ?? []).map(mapRow));
+	accountsLoading.set(false);
 }
 
 let sub: Awaited<ReturnType<typeof supabase.channel>>;

@@ -4,11 +4,13 @@
 	let {
 		show,
 		accounts,
+		accountsLoading = false,
 		onclose,
 		onsubmit,
 	}: {
 		show: boolean;
 		accounts: Array<{ id: string; icon: string; label: string; balance: number; currency: string }>;
+		accountsLoading?: boolean;
 		onclose: () => void;
 		onsubmit: (data: { account_id: string; amount: number; label: string; date: string }) => void;
 	} = $props();
@@ -84,7 +86,7 @@
 			</div>
 
 			<div class="source-endpoint">
-				<button class="source-btn" onclick={() => showSourceDropdown = !showSourceDropdown}>
+				<button class="source-btn" disabled={accountsLoading} onclick={() => showSourceDropdown = !showSourceDropdown}>
 					<div class="source-btn-icon">
 						{#if selectedSource}
 							<Icon name={selectedSource.icon} />
@@ -200,6 +202,7 @@
 	}
 
 	.source-btn:active { border-color: var(--meta-accent); }
+	.source-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 	.source-btn-icon {
 		width: 1.75rem;

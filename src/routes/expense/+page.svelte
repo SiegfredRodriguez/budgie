@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { accounts } from "$lib/stores/accounts";
+	import { accounts, accountsLoading, loadAccounts } from "$lib/stores/accounts";
 	import { session } from "$lib/stores/auth";
 	import { env } from '$env/dynamic/public';
 	import { supabase } from '$lib/supabase';
@@ -43,6 +43,7 @@
 
 	onMount(() => {
 		loadExpenses();
+		loadAccounts();
 	});
 
 	function isCurrentMonth(d: string) {
@@ -103,6 +104,7 @@
 		}
 		closeDialog();
 		await loadExpenses();
+		await loadAccounts();
 	}
 </script>
 
@@ -121,7 +123,7 @@
 	</div>
 </div>
 
-<NewExpenseDialog show={showDialog} accounts={$accounts} onclose={closeDialog} onsubmit={handleCreateExpense} />
+<NewExpenseDialog show={showDialog} accounts={$accounts} accountsLoading={$accountsLoading} onclose={closeDialog} onsubmit={handleCreateExpense} />
 
 <style>
 	.pill-btn {
