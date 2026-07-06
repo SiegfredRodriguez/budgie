@@ -13,6 +13,7 @@
 	let { children } = $props();
 
 	let showModal = $state(false);
+	let splashDone = $state(false);
 
 	let authProtected = $derived.by(() => {
 		const path = $page.url.pathname;
@@ -25,7 +26,7 @@
 		if (!$session && authProtected) {
 			goto("/login");
 		} else if ($session && ($page.url.pathname === "/" || $page.url.pathname === "/login")) {
-			goto("/accounts");
+			goto("/expenses");
 		}
 	});
 
@@ -48,6 +49,7 @@
 	}
 
 	onMount(() => {
+		setTimeout(() => splashDone = true, 2000);
 		initAuth();
 		initLD();
 		if ("serviceWorker" in navigator) {
@@ -91,6 +93,11 @@
 		<TabBar />
 	</div>
 {/if}
+
+<div class="splash-overlay" class:done={splashDone}>
+	<img src={favicon} alt="budgie" class="splash-logo" />
+	<span class="splash-name">budgie</span>
+</div>
 
 <style>
 	.splash {
@@ -153,5 +160,37 @@
 		width: 1rem;
 		height: 1rem;
 		color: var(--meta-accent);
+	}
+
+	.splash-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 9999;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		background: var(--meta-darker);
+		opacity: 1;
+		transition: opacity 0.5s ease;
+		pointer-events: all;
+	}
+
+	.splash-overlay.done {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.splash-logo {
+		width: 3rem;
+		height: 3rem;
+	}
+
+	.splash-name {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--meta-light);
+		letter-spacing: 0.04em;
 	}
 </style>
