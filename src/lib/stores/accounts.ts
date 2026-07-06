@@ -62,6 +62,7 @@ function authHeaders() {
 	const key = env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 	return {
 		'Content-Type': 'application/json',
+		'apikey': key,
 		'Authorization': `Bearer ${key}`,
 	};
 }

@@ -5,7 +5,7 @@
 
 	onMount(async () => {
 		await supabase.auth.getSession();
-		goto('/financial');
+		goto('/accounts');
 	});
 </script>
 

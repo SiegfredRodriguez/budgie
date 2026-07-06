@@ -86,10 +86,11 @@
 	async function handleCreateExpense(data: { account_id: string; amount: number; label: string; date: string }) {
 		const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-expense`, {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${env.PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
-			},
+		headers: {
+			'Content-Type': 'application/json',
+			'apikey': env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+			'Authorization': `Bearer ${env.PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
+		},
 			body: JSON.stringify({
 				account_id: data.account_id,
 				amount: data.amount,
