@@ -18,12 +18,19 @@
 	let amount = $state("");
 	let label = $state("");
 	let sourceId = $state("");
+	let searchQuery = $state("");
 	let showSourceDropdown = $state(false);
 	let dateStr = $state(new Date().toISOString().slice(0, 10));
 	let busy = $state(false);
 
 	let selectedSource = $derived(accounts.find((a) => a.id === sourceId));
+	let filteredAccounts = $derived(
+		searchQuery
+			? accounts.filter((a) => a.label.toLowerCase().includes(searchQuery.toLowerCase()))
+			: accounts,
+	);
 	let amountInput: HTMLInputElement | undefined = $state();
+	let searchInput: HTMLInputElement | undefined = $state();
 
 	function fmt(n: number, c: string): string {
 		const p = Math.abs(n).toFixed(2).split(".");
@@ -36,6 +43,7 @@
 			amount = "";
 			label = "";
 			sourceId = accounts.length > 0 ? accounts[0].id : "";
+			searchQuery = "";
 			showSourceDropdown = false;
 			dateStr = new Date().toISOString().slice(0, 10);
 			busy = false;
@@ -53,6 +61,7 @@
 
 	function selectSource(id: string) {
 		sourceId = id;
+		searchQuery = "";
 		showSourceDropdown = false;
 	}
 
@@ -86,23 +95,33 @@
 			</div>
 
 			<div class="source-endpoint">
-				<button class="source-btn" disabled={accountsLoading} onclick={() => showSourceDropdown = !showSourceDropdown}>
-					<div class="source-btn-icon">
-						{#if selectedSource}
+				<div class="source-combo">
+					<div class="source-combo-icon">
+						{#if searchQuery === "" && selectedSource}
 							<Icon name={selectedSource.icon} />
 						{/if}
 					</div>
-					<div class="source-btn-text">
-						<span class="source-btn-label" class:source-placeholder={!selectedSource}>{selectedSource ? selectedSource.label : "Select source account"}</span>
-						{#if selectedSource}
-							<span class="source-btn-balance">{fmt(selectedSource.balance, selectedSource.currency)}</span>
-						{/if}
-					</div>
-					<svg class="source-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-				</button>
-				{#if showSourceDropdown}
+					<input
+						class="source-combo-input"
+						type="text"
+						placeholder={selectedSource && searchQuery === "" ? selectedSource.label : "Search account…"}
+						value={searchQuery}
+						oninput={(e) => {
+							searchQuery = (e.target as HTMLInputElement).value;
+							if (searchQuery) sourceId = "";
+							showSourceDropdown = true;
+						}}
+						onfocus={() => { showSourceDropdown = true; }}
+						onblur={() => setTimeout(() => showSourceDropdown = false, 150)}
+						bind:this={searchInput}
+					/>
+					{#if selectedSource && searchQuery === ""}
+						<span class="source-combo-balance">{fmt(selectedSource.balance, selectedSource.currency)}</span>
+					{/if}
+				</div>
+				{#if showSourceDropdown && filteredAccounts.length > 0}
 					<div class="source-dropdown">
-						{#each accounts as acct}
+						{#each filteredAccounts as acct}
 							<div class="source-option" role="button" tabindex="0" onclick={() => selectSource(acct.id)} onkeydown={(e) => e.key === "Enter" && selectSource(acct.id)}>
 								<div class="source-option-icon"><Icon name={acct.icon} /></div>
 								<div class="source-option-text">
@@ -186,7 +205,7 @@
 		position: relative;
 	}
 
-	.source-btn {
+	.source-combo {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -194,57 +213,40 @@
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.625rem;
 		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
-		background: transparent;
+		background: var(--meta-darker);
 		color: var(--meta-light);
-		cursor: pointer;
-		-webkit-tap-highlight-color: transparent;
 		transition: border-color 0.15s;
 	}
 
-	.source-btn:active { border-color: var(--meta-accent); }
-	.source-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+	.source-combo:focus-within { border-color: var(--meta-accent); }
 
-	.source-btn-icon {
+	.source-combo-icon {
 		width: 1.75rem;
 		height: 1.75rem;
 		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
-	.source-btn-text {
-		display: flex;
-		flex-direction: column;
+	.source-combo-input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--meta-light);
+		font-size: 0.875rem;
+		font-weight: 600;
 		min-width: 0;
 	}
 
-	.source-btn-label {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--meta-light);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		text-align: left;
-	}
+	.source-combo-input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
-	.source-btn-balance {
+	.source-combo-balance {
 		font-size: 0.6875rem;
 		font-weight: 500;
 		color: var(--meta-silver);
 		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.source-placeholder {
-		color: rgba(255, 255, 255, 0.35);
-	}
-
-	.source-chevron {
-		width: 1rem;
-		height: 1rem;
-		color: var(--meta-silver);
-		margin-left: auto;
-		flex-shrink: 0;
 	}
 
 	.source-dropdown {
@@ -254,9 +256,11 @@
 		right: 0;
 		margin-top: 0.25rem;
 		background: var(--meta-darker);
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
 		border-radius: 0.625rem;
-		overflow: hidden;
-		z-index: 10;
+		overflow-y: auto;
+		z-index: 350;
+		max-height: 9rem;
 	}
 
 	.source-option {
