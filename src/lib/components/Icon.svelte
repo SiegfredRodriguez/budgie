@@ -1,9 +1,37 @@
 <script lang="ts">
 	let { name = "wallet" }: { name: string } = $props();
+
+	let src = $state("");
+
+	$effect(() => {
+		if (name.startsWith("http")) {
+			iconCache.load(name).then((url) => src = url);
+		}
+	});
+</script>
+
+<script context="module" lang="ts">
+	const blobCache = new Map<string, string>();
+
+	const iconCache = {
+		async load(url: string): Promise<string> {
+			const cached = blobCache.get(url);
+			if (cached) return cached;
+			try {
+				const res = await fetch(url);
+				const blob = await res.blob();
+				const blobUrl = URL.createObjectURL(blob);
+				blobCache.set(url, blobUrl);
+				return blobUrl;
+			} catch {
+				return url;
+			}
+		},
+	};
 </script>
 
 {#if name.startsWith("http")}
-	<img src={name} alt="" />
+	<img {src} alt="" />
 {:else if name === "wallet"}
 	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
 {:else if name === "bank"}
