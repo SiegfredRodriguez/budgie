@@ -38,7 +38,11 @@ export async function loadExpenses() {
 			.eq('type', 'EXPENSE');
 		if (error || !data) return;
 		expenses.set(
-			data.map(mapRow).sort((a, b) => b.date.localeCompare(a.date)),
+			data.map(mapRow).sort((a, b) => {
+				const dateCmp = b.date.localeCompare(a.date);
+				if (dateCmp !== 0) return dateCmp;
+				return b.createdAt.localeCompare(a.createdAt);
+			}),
 		);
 	} finally {
 		expensesLoading.set(false);
