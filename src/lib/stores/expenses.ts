@@ -19,13 +19,13 @@ export const expensesLoading = writable(false);
 
 function mapRow(t: any): Expense {
 	return {
-		id: t.expense_details.id,
-		amount: Math.abs(t.amount),
-		label: t.expense_details.label,
-		date: t.expense_details.date,
-		accountId: t.account_id,
-		currency: t.currency,
-		createdAt: t.created_at,
+		id: t.id,
+		amount: Math.abs(t.transaction.amount),
+		label: t.label,
+		date: t.date,
+		accountId: t.transaction.account_id,
+		currency: t.transaction.currency,
+		createdAt: t.transaction.created_at,
 	};
 }
 
@@ -33,9 +33,9 @@ export async function loadExpenses() {
 	expensesLoading.set(true);
 	try {
 		const { data, error } = await supabase
-			.from('transactions')
-			.select('amount, currency, account_id, created_at, expense_details!inner(id, label, date)')
-			.eq('type', 'EXPENSE');
+			.from('expense_details')
+			.select('id, label, date, transaction:transaction_id!inner(amount, currency, account_id, created_at)')
+			.eq('transaction.type', 'EXPENSE');
 		if (error || !data) return;
 		expenses.set(
 			data.map(mapRow).sort((a, b) => {
