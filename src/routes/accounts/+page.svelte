@@ -23,7 +23,6 @@
     let transferSourceId = $state("");
     let transferAmount = $state("");
     let transferTargetId = $state("");
-    let showTargetDropdown = $state(false);
 
     let transferSource = $derived($accounts.find((a) => a.id === transferSourceId));
     let transferTarget = $derived($accounts.find((a) => a.id === transferTargetId));
@@ -33,7 +32,6 @@
         transferSourceId = id;
         transferAmount = "";
         transferTargetId = "";
-        showTargetDropdown = false;
         showTransfer = true;
     }
 
@@ -52,7 +50,6 @@
 
     function selectTarget(id: string) {
         transferTargetId = id;
-        showTargetDropdown = false;
     }
 
     function openTopUp(id: string) {
@@ -136,15 +133,11 @@
     show={showTransfer}
     source={transferSource}
     target={transferTarget}
-    targetId={transferTargetId}
-    amount={transferAmount}
-    showDropdown={showTargetDropdown}
     otherAccounts={transferOtherAccounts}
     onclose={() => showTransfer = false}
     ondone={handleTransferDone}
     onamount={(v) => transferAmount = v}
     onselect={selectTarget}
-    ontoggle={() => showTargetDropdown = !showTargetDropdown}
 />
 
 <style>

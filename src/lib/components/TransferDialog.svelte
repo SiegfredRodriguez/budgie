@@ -5,32 +5,51 @@
 		show,
 		source,
 		target,
-		targetId,
-		amount,
-		showDropdown,
 		otherAccounts,
 		onclose,
 		ondone,
 		onamount,
 		onselect,
-		ontoggle,
 	}: {
 		show: boolean;
 		source: { id: string; balance: number; currency: string; icon: string; label: string } | undefined;
 		target: { id: string; balance: number; currency: string; icon: string; label: string } | undefined;
-		targetId: string;
-		amount: string;
-		showDropdown: boolean;
 		otherAccounts: Array<{ id: string; icon: string; label: string; currency: string; balance: number }>;
 		onclose: () => void;
 		ondone: () => void;
 		onamount: (v: string) => void;
 		onselect: (id: string) => void;
-		ontoggle: () => void;
 	} = $props();
 
-	let overBalance = $derived(!!source && parseFloat(amount) > source.balance);
+	let amount = $state("");
+	let searchQuery = $state("");
+	let showDropdown = $state(false);
 	let busy = $state(false);
+
+	let selectedTarget = $derived(target);
+	let filteredAccounts = $derived(
+		searchQuery
+			? otherAccounts.filter((a) => a.label.toLowerCase().includes(searchQuery.toLowerCase()))
+			: otherAccounts,
+	);
+	let searchInput: HTMLInputElement | undefined = $state();
+
+	let overBalance = $derived(!!source && parseFloat(amount) > source.balance);
+
+	function fmt(n: number, c: string): string {
+		const p = Math.abs(n).toFixed(2).split(".");
+		p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+		return `${c} ${p[0]}.${p[1]}`;
+	}
+
+	$effect(() => {
+		if (show) {
+			amount = "";
+			searchQuery = "";
+			showDropdown = false;
+			busy = false;
+		}
+	});
 
 	function handleOverlay(e: MouseEvent) {
 		if (e.target === e.currentTarget) onclose();
@@ -38,6 +57,12 @@
 
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === "Escape") onclose();
+	}
+
+	function selectTarget(id: string) {
+		onselect(id);
+		searchQuery = "";
+		showDropdown = false;
 	}
 
 	async function handleDone() {
@@ -62,22 +87,40 @@
 				<div class="transfer-balance">{source.currency} {source.balance.toFixed(2)}</div>
 			</div>
 
-			<div class="transfer-endpoint">
-				<button class="transfer-target-btn" onclick={ontoggle}>
-					<div class="transfer-target-icon">
-						{#if target}
-							<Icon name={target.icon} />
+			<div class="source-endpoint">
+				<div class="source-combo">
+					<div class="source-combo-icon">
+						{#if searchQuery === "" && selectedTarget}
+							<Icon name={selectedTarget.icon} />
 						{/if}
 					</div>
-					<span class="transfer-target-label" class:transfer-placeholder={!target}>{target ? target.label : "Select target account"}</span>
-					<svg class="transfer-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-				</button>
-				{#if showDropdown}
-					<div class="transfer-dropdown">
-						{#each otherAccounts as acct}
-							<div class="transfer-option" role="button" tabindex="0" onclick={() => onselect(acct.id)} onkeydown={(e) => e.key === "Enter" && onselect(acct.id)}>
-								<div class="transfer-option-icon"><Icon name={acct.icon} /></div>
-								<span class="transfer-option-label">{acct.label}</span>
+					<input
+						class="source-combo-input"
+						type="text"
+						placeholder={selectedTarget && searchQuery === "" ? selectedTarget.label : "Search account…"}
+						value={searchQuery}
+						oninput={(e) => {
+							searchQuery = (e.target as HTMLInputElement).value;
+							if (searchQuery && selectedTarget) onselect("");
+							showDropdown = true;
+						}}
+						onfocus={() => { showDropdown = true; }}
+						onblur={() => setTimeout(() => showDropdown = false, 150)}
+						bind:this={searchInput}
+					/>
+					{#if selectedTarget && searchQuery === ""}
+						<span class="source-combo-balance">{fmt(selectedTarget.balance, selectedTarget.currency)}</span>
+					{/if}
+				</div>
+				{#if showDropdown && filteredAccounts.length > 0}
+					<div class="source-dropdown">
+						{#each filteredAccounts as acct}
+							<div class="source-option" role="button" tabindex="0" onclick={() => selectTarget(acct.id)} onkeydown={(e) => e.key === "Enter" && selectTarget(acct.id)}>
+								<div class="source-option-icon"><Icon name={acct.icon} /></div>
+								<div class="source-option-text">
+									<span class="source-option-label">{acct.label}</span>
+									<span class="source-option-balance">{fmt(acct.balance, acct.currency)}</span>
+								</div>
 							</div>
 						{/each}
 					</div>
@@ -165,12 +208,12 @@
 		letter-spacing: 0.01em;
 	}
 
-	.transfer-endpoint {
+	.source-endpoint {
 		width: 100%;
 		position: relative;
 	}
 
-	.transfer-target-btn {
+	.source-combo {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -178,55 +221,57 @@
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.625rem;
 		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
-		background: transparent;
+		background: var(--meta-darker);
 		color: var(--meta-light);
-		cursor: pointer;
-		-webkit-tap-highlight-color: transparent;
 		transition: border-color 0.15s;
 	}
 
-	.transfer-target-btn:active { border-color: var(--meta-accent); }
+	.source-combo:focus-within { border-color: var(--meta-accent); }
 
-	.transfer-target-icon {
+	.source-combo-icon {
 		width: 1.75rem;
 		height: 1.75rem;
 		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
-	.transfer-target-label {
+	.source-combo-input {
+		flex: 1;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--meta-light);
 		font-size: 0.875rem;
 		font-weight: 600;
-		color: var(--meta-light);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+		min-width: 0;
 	}
 
-	.transfer-placeholder {
-		color: rgba(255, 255, 255, 0.35);
-	}
+	.source-combo-input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
-	.transfer-chevron {
-		width: 1rem;
-		height: 1rem;
+	.source-combo-balance {
+		font-size: 0.6875rem;
+		font-weight: 500;
 		color: var(--meta-silver);
-		margin-left: auto;
-		flex-shrink: 0;
+		white-space: nowrap;
 	}
 
-	.transfer-dropdown {
+	.source-dropdown {
 		position: absolute;
 		top: 100%;
 		left: 0;
 		right: 0;
 		margin-top: 0.25rem;
 		background: var(--meta-darker);
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
 		border-radius: 0.625rem;
-		overflow: hidden;
-		z-index: 10;
+		overflow-y: auto;
+		z-index: 350;
+		max-height: 9rem;
 	}
 
-	.transfer-option {
+	.source-option {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
@@ -239,19 +284,35 @@
 		outline: none;
 	}
 
-	.transfer-option:hover { background: rgba(255, 255, 255, 0.05); }
-	.transfer-option:focus-visible { outline: none; }
+	.source-option:hover { background: rgba(255, 255, 255, 0.05); }
+	.source-option:focus-visible { outline: none; }
 
-	.transfer-option-icon {
+	.source-option-icon {
 		width: 1.75rem;
 		height: 1.75rem;
 		flex-shrink: 0;
 	}
 
-	.transfer-option-label {
+	.source-option-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	.source-option-label {
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--meta-light);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-align: left;
+	}
+
+	.source-option-balance {
+		font-size: 0.6875rem;
+		font-weight: 500;
+		color: var(--meta-silver);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
