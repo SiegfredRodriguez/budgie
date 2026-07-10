@@ -182,24 +182,20 @@
 		width: 2.25rem;
 		height: 2.25rem;
 		border-radius: 50%;
-		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		border: none;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: rgba(26, 38, 69, 0.6);
-		-webkit-backdrop-filter: blur(1.25rem);
-		backdrop-filter: blur(1.25rem);
+		background: transparent;
 		color: var(--meta-silver);
 		cursor: pointer;
-		box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.5);
-		transition: transform 0.15s, background 0.15s;
+		transition: opacity 0.15s;
 		-webkit-tap-highlight-color: transparent;
 		user-select: none;
 	}
 
 	.ctx-btn:active {
-		transform: scale(0.92);
-		background: rgba(26, 38, 69, 0.8);
+		opacity: 0.6;
 	}
 
 	.ctx-dropdown {
