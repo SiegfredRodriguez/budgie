@@ -3,7 +3,7 @@
 	import favicon from "$lib/assets/favicon.svg";
 	import { onMount } from "svelte";
 	import { page } from "$app/stores";
-	import { goto } from "$app/navigation";
+	import { goto, onNavigate } from "$app/navigation";
 	import { initAccounts, addAccount } from "$lib/stores/accounts";
 	import { initExpenses } from "$lib/stores/expenses";
 	import { initTags } from "$lib/stores/tags";
@@ -41,6 +41,22 @@
 			const remaining = Math.max(0, 2000 - elapsed);
 			setTimeout(() => splashDone = true, remaining);
 		}
+	});
+
+	onNavigate((navigation) => {
+		if (!document.startViewTransition) return;
+		const to = navigation.to?.url.pathname;
+		const from = navigation.from?.url.pathname;
+		if (!to || !from) return;
+		if (to === from) return;
+		if (from === '/' || from === '/login' || to === '/login') return;
+
+		return new Promise<void>((resolve) => {
+			document.startViewTransition(async () => {
+				resolve();
+				await navigation.complete;
+			});
+		});
 	});
 
 	async function handleCreate(data: { icon: string; name: string; initialValue: string }) {
@@ -184,5 +200,40 @@
 		font-weight: 600;
 		color: var(--meta-light);
 		letter-spacing: 0.04em;
+	}
+
+	::view-transition-old(root) {
+		animation: ft-out 0.2s cubic-bezier(0.4, 0, 1, 1) forwards;
+	}
+
+	::view-transition-new(root) {
+		animation: ft-in 0.2s linear 0.07s both;
+		transform-origin: center center;
+	}
+
+	@keyframes ft-out {
+		from { opacity: 1; }
+		to { opacity: 0; }
+	}
+
+	@keyframes ft-in {
+		0% { opacity: 0; transform: scale(0.92); }
+		10% { opacity: 0; transform: scale(0.92); }
+		20% { opacity: 0; transform: scale(0.92); }
+		30% { opacity: 0; transform: scale(0.92); }
+		35% { opacity: 0; transform: scale(0.92); }
+		40% { opacity: 0.1923; transform: scale(0.96582); }
+		45% { opacity: 0.3846; transform: scale(1.00702); }
+		50% { opacity: 0.5769; transform: scale(1.01143); }
+		55% { opacity: 0.7692; transform: scale(1.00266); }
+		60% { opacity: 0.9615; transform: scale(0.99806); }
+		65% { opacity: 1; transform: scale(0.99867); }
+		70% { opacity: 1; transform: scale(0.99998); }
+		75% { opacity: 1; transform: scale(1.00033); }
+		80% { opacity: 1; transform: scale(1.00012); }
+		85% { opacity: 1; transform: scale(0.99996); }
+		90% { opacity: 1; transform: scale(0.99996); }
+		95% { opacity: 1; transform: scale(0.99999); }
+		100% { opacity: 1; transform: scale(1); }
 	}
 </style>
