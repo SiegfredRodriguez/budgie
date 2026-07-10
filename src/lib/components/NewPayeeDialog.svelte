@@ -1,7 +1,9 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
 	import ImageCropper from "./ImageCropper.svelte";
-	import TagPillInput from "./TagPillInput.svelte";
+	import TagsField from "./TagsField.svelte";
+	import { session } from "$lib/stores/auth";
+	import { createTag } from "$lib/stores/tags";
 
 	let {
 		show,
@@ -18,6 +20,7 @@
 	let icon = $state("store");
 	let label = $state("");
 	let tagIds = $state<string[]>([]);
+	let stagedTags = $state<string[]>([]);
 	let busy = $state(false);
 	let labelInput: HTMLInputElement;
 	let fileInput: HTMLInputElement;
@@ -28,6 +31,7 @@
 			icon = "store";
 			label = query;
 			tagIds = [];
+			stagedTags = [];
 			busy = false;
 			cropFile = null;
 			requestAnimationFrame(() => labelInput?.focus());
@@ -66,7 +70,12 @@
 		if (busy || !label.trim()) return;
 		busy = true;
 		try {
-			await onsubmit({ label: label.trim(), icon, tagIds });
+			const allTagIds = [...tagIds];
+			for (const value of stagedTags) {
+				const created = await createTag(value, $session!.user.id);
+				allTagIds.push(created.id);
+			}
+			await onsubmit({ label: label.trim(), icon, tagIds: allTagIds });
 		} finally {
 			busy = false;
 		}
@@ -88,10 +97,7 @@
 				<input class="name-input" type="text" placeholder="e.g. Starbucks" value={label} oninput={(e) => label = (e.target as HTMLInputElement).value} bind:this={labelInput} />
 			</div>
 
-			<div class="field">
-				<span class="field-label">Tags</span>
-				<TagPillInput selected={tagIds} onchange={(ids) => tagIds = ids} />
-			</div>
+			<TagsField selected={tagIds} onchange={(ids) => tagIds = ids} staged={stagedTags} onstage={(v) => stagedTags = v} />
 
 			<button class="submit-btn" onclick={handleSubmit} disabled={busy || !label.trim()}>{busy ? "Creating..." : "Create Payee"}</button>
 		</div>
@@ -215,20 +221,6 @@
 
 	.name-input:focus { border-color: var(--meta-accent); }
 	.name-input::placeholder { color: rgba(255, 255, 255, 0.25); }
-
-	.field {
-		margin-bottom: 1rem;
-	}
-
-	.field-label {
-		display: block;
-		font-size: 0.8125rem;
-		font-weight: 600;
-		color: var(--meta-silver);
-		margin-bottom: 0.5rem;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-	}
 
 	.submit-btn {
 		width: 100%;

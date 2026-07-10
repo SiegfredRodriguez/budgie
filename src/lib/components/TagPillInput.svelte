@@ -5,9 +5,13 @@
 	let {
 		selected = [],
 		onchange,
+		staged = [],
+		onstage,
 	}: {
 		selected: string[];
 		onchange: (ids: string[]) => void;
+		staged: string[];
+		onstage: (values: string[]) => void;
 	} = $props();
 
 	let query = $state("");
@@ -37,15 +41,40 @@
 		inputEl?.focus();
 	}
 
-	function removeTag(id: string) {
+	function stageTag(value: string) {
+		const trimmed = value.trim();
+		if (trimmed && !staged.includes(trimmed)) {
+			onstage([...staged, trimmed]);
+		}
+		query = "";
+		showDropdown = false;
+		inputEl?.focus();
+	}
+
+	function removeSelected(id: string) {
 		onchange(selected.filter((i) => i !== id));
+	}
+
+	function removeStaged(value: string) {
+		onstage(staged.filter((v) => v !== value));
 	}
 
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === "Escape") {
 			showDropdown = false;
-		} else if (e.key === "Backspace" && query === "" && selected.length > 0) {
-			onchange(selected.slice(0, -1));
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			if (suggestions.length > 0) {
+				addTag(suggestions[0].id);
+			} else if (query.trim()) {
+				stageTag(query);
+			}
+		} else if (e.key === "Backspace" && query === "") {
+			if (staged.length > 0) {
+				onstage(staged.slice(0, -1));
+			} else if (selected.length > 0) {
+				onchange(selected.slice(0, -1));
+			}
 		}
 	}
 </script>
@@ -53,9 +82,17 @@
 <div class="pill-input">
 	<div class="pills">
 		{#each selectedTags as tag (tag.id)}
-			<span class="pill">
+			<span class="pill pill-existing">
 				{tag.value}
-				<button class="pill-x" onclick={() => removeTag(tag.id)} aria-label="Remove tag">
+				<button class="pill-x" onclick={() => removeSelected(tag.id)} aria-label="Remove tag">
+					<X size={12} strokeWidth={3} />
+				</button>
+			</span>
+		{/each}
+		{#each staged as value (value)}
+			<span class="pill pill-staged">
+				{value}
+				<button class="pill-x" onclick={() => removeStaged(value)} aria-label="Remove tag">
 					<X size={12} strokeWidth={3} />
 				</button>
 			</span>
@@ -63,7 +100,7 @@
 		<input
 			class="pill-text"
 			type="text"
-			placeholder={selected.length === 0 ? "Add tags…" : ""}
+			placeholder={selected.length === 0 && staged.length === 0 ? "Add tags…" : ""}
 			value={query}
 			oninput={(e) => { query = (e.target as HTMLInputElement).value; showDropdown = true; }}
 			onfocus={() => showDropdown = true}
@@ -112,11 +149,19 @@
 		gap: 0.25rem;
 		padding: 0.1875rem 0.5rem 0.1875rem 0.625rem;
 		border-radius: 1rem;
-		background: rgba(64, 224, 208, 0.12);
-		color: var(--meta-accent);
 		font-size: 0.8125rem;
 		font-weight: 600;
 		white-space: nowrap;
+	}
+
+	.pill-existing {
+		background: rgba(64, 224, 208, 0.12);
+		color: var(--meta-accent);
+	}
+
+	.pill-staged {
+		background: rgba(234, 179, 8, 0.15);
+		color: #fff;
 	}
 
 	.pill-x {
@@ -128,7 +173,7 @@
 		border-radius: 50%;
 		border: none;
 		background: transparent;
-		color: var(--meta-accent);
+		color: inherit;
 		cursor: pointer;
 		padding: 0;
 		transition: background 0.1s;
@@ -136,7 +181,7 @@
 	}
 
 	.pill-x:hover {
-		background: rgba(64, 224, 208, 0.2);
+		background: rgba(255, 255, 255, 0.15);
 	}
 
 	.pill-text {
