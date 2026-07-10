@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { accounts, accountsLoading } from "$lib/stores/accounts";
 	import { expenses, loadExpenses } from "$lib/stores/expenses";
 	import { session } from "$lib/stores/auth";
@@ -98,7 +99,7 @@
 		{#if showCtxMenu}
 			<div class="ctx-overlay" onclick={() => showCtxMenu = false}></div>
 			<div class="ctx-dropdown">
-				<button class="ctx-item">
+				<button class="ctx-item" onclick={() => { goto('/tags'); showCtxMenu = false; }}>
 					<Tag size={16} strokeWidth={2} />
 					Tags
 				</button>
