@@ -8,6 +8,7 @@
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
 	import { flags } from "$lib/stores/flags";
 	import Plus from "@lucide/svelte/icons/plus";
+	import Logs from "@lucide/svelte/icons/logs";
 
 	const now = new Date();
 	const currentMonth = now.getMonth();
@@ -37,6 +38,7 @@
 	let scroller: HTMLElement;
 
 	let showDialog = $state(false);
+	let showCtxMenu = $state(false);
 
 	function handleScroll() {
 		scrollTop = scroller.scrollTop;
@@ -85,6 +87,20 @@
 	<button class="fab" onclick={openDialog}>
 		<Plus size={24} strokeWidth={3} />
 	</button>
+{/if}
+{#if $flags["fab"] && $flags["context-menu"]}
+	<div class="ctx-wrapper">
+		<button class="ctx-btn" onclick={() => showCtxMenu = !showCtxMenu}>
+			<Logs size={20} />
+		</button>
+		{#if showCtxMenu}
+			<div class="ctx-dropdown">
+				<button class="ctx-item">Dummy entry 1</button>
+				<button class="ctx-item">Dummy entry 2</button>
+				<button class="ctx-item">Dummy entry 3</button>
+			</div>
+		{/if}
+	</div>
 {/if}
 
 <div class="scroller" onscroll={handleScroll} bind:this={scroller}>
@@ -153,6 +169,73 @@
 
 	.fab:active {
 		transform: scale(0.92);
+	}
+
+	.ctx-wrapper {
+		position: fixed;
+		top: calc(0.5rem + env(safe-area-inset-top));
+		right: calc(1rem + env(safe-area-inset-right));
+		z-index: 200;
+	}
+
+	.ctx-btn {
+		width: 2.25rem;
+		height: 2.25rem;
+		border-radius: 50%;
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(26, 38, 69, 0.6);
+		-webkit-backdrop-filter: blur(1.25rem);
+		backdrop-filter: blur(1.25rem);
+		color: var(--meta-silver);
+		cursor: pointer;
+		box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.5);
+		transition: transform 0.15s, background 0.15s;
+		-webkit-tap-highlight-color: transparent;
+		user-select: none;
+	}
+
+	.ctx-btn:active {
+		transform: scale(0.92);
+		background: rgba(26, 38, 69, 0.8);
+	}
+
+	.ctx-dropdown {
+		position: absolute;
+		top: calc(100% + 0.375rem);
+		right: 0;
+		min-width: 10rem;
+		background: rgba(26, 38, 69, 0.9);
+		-webkit-backdrop-filter: blur(1.25rem);
+		backdrop-filter: blur(1.25rem);
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		border-radius: 0.75rem;
+		overflow: hidden;
+		box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.5);
+	}
+
+	.ctx-item {
+		width: 100%;
+		padding: 0.75rem 1rem;
+		background: transparent;
+		border: none;
+		color: var(--meta-light);
+		font-size: 0.8125rem;
+		font-weight: 500;
+		text-align: left;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		transition: background 0.1s;
+	}
+
+	.ctx-item:hover {
+		background: rgba(255, 255, 255, 0.06);
+	}
+
+	.ctx-item + .ctx-item {
+		border-top: 0.0625rem solid rgba(255, 255, 255, 0.05);
 	}
 
 	.pill-btn svg {
