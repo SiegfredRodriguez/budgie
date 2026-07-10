@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 	);
 
 	const { data, error } = await supabase
-		.from("tag")
+		.from("tags")
 		.insert({ value: sanitized })
 		.select()
 		.single();

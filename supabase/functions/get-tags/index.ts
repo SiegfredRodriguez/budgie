@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 	);
 
 	const { data, error } = await supabase
-		.from("tag")
+		.from("tags")
 		.select("*")
 		.order("value", { ascending: true });
 

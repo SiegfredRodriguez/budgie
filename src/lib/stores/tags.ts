@@ -22,7 +22,7 @@ export async function loadTags() {
 	tagsLoading.set(true);
 	try {
 		const { data, error } = await supabase
-			.from("tag")
+			.from("tags")
 			.select("*")
 			.order("value", { ascending: true });
 		if (error) return;
@@ -40,7 +40,7 @@ function subscribeTags() {
 		.channel("tags-changes")
 		.on(
 			"postgres_changes",
-			{ event: "*", schema: "public", table: "tag" },
+			{ event: "*", schema: "public", table: "tags" },
 			(
 				payload: RealtimePostgresChangesPayload<{
 					id: string;
