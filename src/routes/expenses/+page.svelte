@@ -9,6 +9,8 @@
 	import { flags } from "$lib/stores/flags";
 	import Plus from "@lucide/svelte/icons/plus";
 	import Logs from "@lucide/svelte/icons/logs";
+	import Tag from "@lucide/svelte/icons/tag";
+	import Store from "@lucide/svelte/icons/store";
 
 	const now = new Date();
 	const currentMonth = now.getMonth();
@@ -96,9 +98,14 @@
 		{#if showCtxMenu}
 			<div class="ctx-overlay" onclick={() => showCtxMenu = false}></div>
 			<div class="ctx-dropdown">
-				<button class="ctx-item">Dummy entry 1</button>
-				<button class="ctx-item">Dummy entry 2</button>
-				<button class="ctx-item">Dummy entry 3</button>
+				<button class="ctx-item">
+					<Tag size={16} strokeWidth={2} />
+					Tags
+				</button>
+				<button class="ctx-item">
+					<Store size={16} strokeWidth={2} />
+					Payees
+				</button>
 			</div>
 		{/if}
 	</div>
@@ -229,6 +236,9 @@
 		font-weight: 500;
 		text-align: left;
 		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 0.625rem;
 		-webkit-tap-highlight-color: transparent;
 		transition: background 0.1s;
 	}
