@@ -94,6 +94,7 @@
 			<Logs size={20} strokeWidth={3}/>
 		</button>
 		{#if showCtxMenu}
+			<div class="ctx-overlay" onclick={() => showCtxMenu = false}></div>
 			<div class="ctx-dropdown">
 				<button class="ctx-item">Dummy entry 1</button>
 				<button class="ctx-item">Dummy entry 2</button>
@@ -196,6 +197,12 @@
 
 	.ctx-btn:active {
 		opacity: 0.6;
+	}
+
+	.ctx-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 199;
 	}
 
 	.ctx-dropdown {
