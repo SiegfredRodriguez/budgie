@@ -91,7 +91,7 @@
 {#if $flags["fab"] && $flags["context-menu"]}
 	<div class="ctx-wrapper">
 		<button class="ctx-btn" onclick={() => showCtxMenu = !showCtxMenu}>
-			<Logs size={20} />
+			<Logs size={20} strokeWidth={3}/>
 		</button>
 		{#if showCtxMenu}
 			<div class="ctx-dropdown">
@@ -187,7 +187,7 @@
 		align-items: center;
 		justify-content: center;
 		background: transparent;
-		color: var(--meta-silver);
+		color: var(--meta-darker);
 		cursor: pointer;
 		transition: opacity 0.15s;
 		-webkit-tap-highlight-color: transparent;
