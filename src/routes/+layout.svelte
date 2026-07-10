@@ -208,7 +208,6 @@
 
 	::view-transition-new(root) {
 		animation: ft-in 0.2s linear 0.07s both;
-		transform-origin: center center;
 	}
 
 	@keyframes ft-out {
@@ -217,23 +216,23 @@
 	}
 
 	@keyframes ft-in {
-		0% { opacity: 0; transform: scale(0.92); }
-		10% { opacity: 0; transform: scale(0.92); }
-		20% { opacity: 0; transform: scale(0.92); }
-		30% { opacity: 0; transform: scale(0.92); }
-		35% { opacity: 0; transform: scale(0.92); }
-		40% { opacity: 0.1923; transform: scale(0.96582); }
-		45% { opacity: 0.3846; transform: scale(1.00702); }
-		50% { opacity: 0.5769; transform: scale(1.01143); }
-		55% { opacity: 0.7692; transform: scale(1.00266); }
-		60% { opacity: 0.9615; transform: scale(0.99806); }
-		65% { opacity: 1; transform: scale(0.99867); }
-		70% { opacity: 1; transform: scale(0.99998); }
-		75% { opacity: 1; transform: scale(1.00033); }
-		80% { opacity: 1; transform: scale(1.00012); }
-		85% { opacity: 1; transform: scale(0.99996); }
-		90% { opacity: 1; transform: scale(0.99996); }
-		95% { opacity: 1; transform: scale(0.99999); }
-		100% { opacity: 1; transform: scale(1); }
+		0% { opacity: 0; transform: translateY(8%); }
+		10% { opacity: 0; transform: translateY(8%); }
+		20% { opacity: 0; transform: translateY(8%); }
+		30% { opacity: 0; transform: translateY(8%); }
+		35% { opacity: 0; transform: translateY(8%); }
+		40% { opacity: 0.19; transform: translateY(6.8%); }
+		45% { opacity: 0.38; transform: translateY(4.9%); }
+		50% { opacity: 0.58; transform: translateY(3.1%); }
+		55% { opacity: 0.77; transform: translateY(1.6%); }
+		60% { opacity: 0.96; transform: translateY(0.5%); }
+		65% { opacity: 1; transform: translateY(0); }
+		70% { opacity: 1; transform: translateY(0); }
+		75% { opacity: 1; transform: translateY(0); }
+		80% { opacity: 1; transform: translateY(0); }
+		85% { opacity: 1; transform: translateY(0); }
+		90% { opacity: 1; transform: translateY(0); }
+		95% { opacity: 1; transform: translateY(0); }
+		100% { opacity: 1; transform: translateY(0); }
 	}
 </style>
