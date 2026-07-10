@@ -207,7 +207,7 @@
 	}
 
 	::view-transition-new(root) {
-		animation: ft-in 0.2s linear 0.07s both;
+		animation: ft-in 0.2s linear both;
 	}
 
 	@keyframes ft-out {
