@@ -210,13 +210,13 @@
 	.ctx-overlay {
 		position: fixed;
 		inset: 0;
-		z-index: 199;
 	}
 
 	.ctx-dropdown {
 		position: absolute;
 		top: calc(100% + 0.375rem);
 		right: 0;
+		z-index: 1;
 		min-width: 10rem;
 		background: rgba(26, 38, 69, 0.9);
 		-webkit-backdrop-filter: blur(1.25rem);
