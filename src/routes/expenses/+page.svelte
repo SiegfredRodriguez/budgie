@@ -6,6 +6,7 @@
 	import ExpenseHero from "$lib/components/ExpenseHero.svelte";
 	import ExpenseItem from "$lib/components/ExpenseItem.svelte";
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
+	import { flags } from "$lib/stores/flags";
 
 	const now = new Date();
 	const currentMonth = now.getMonth();
@@ -73,10 +74,17 @@
 	}
 </script>
 
-<button class="pill-btn" onclick={openDialog}>
-	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-	New Expense
-</button>
+{#if !$flags["fab"]}
+	<button class="pill-btn" onclick={openDialog}>
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+		New Expense
+	</button>
+{/if}
+{#if $flags["fab"]}
+	<button class="fab" onclick={openDialog}>
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+	</button>
+{/if}
 
 <div class="scroller" onscroll={handleScroll} bind:this={scroller}>
 	<ExpenseHero total={fmt(currentMonthExpenses)} count={currentMonthCount} {scrollTop} height={headerHeight} />
@@ -119,6 +127,36 @@
 	.pill-btn:active {
 		transform: scale(0.96);
 		background: rgba(26, 38, 69, 0.8);
+	}
+
+	.fab {
+		position: fixed;
+		bottom: calc(1.25rem + 3.25rem + 0.75rem);
+		right: calc(1.5rem + env(safe-area-inset-right));
+		width: 3.25rem;
+		height: 3.25rem;
+		border-radius: 50%;
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--meta-accent);
+		color: var(--meta-darker);
+		cursor: pointer;
+		z-index: 200;
+		box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.5);
+		transition: transform 0.15s;
+		-webkit-tap-highlight-color: transparent;
+		user-select: none;
+	}
+
+	.fab:active {
+		transform: scale(0.92);
+	}
+
+	.fab svg {
+		width: 1.5rem;
+		height: 1.5rem;
 	}
 
 	.pill-btn svg {
