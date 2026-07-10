@@ -103,7 +103,7 @@
 					<Tag size={16} strokeWidth={2} />
 					Tags
 				</button>
-				<button class="ctx-item">
+				<button class="ctx-item" onclick={() => { goto('/payees'); showCtxMenu = false; }}>
 					<Store size={16} strokeWidth={2} />
 					Payees
 				</button>
