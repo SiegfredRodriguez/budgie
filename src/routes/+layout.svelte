@@ -6,6 +6,7 @@
 	import { goto } from "$app/navigation";
 	import { initAccounts, addAccount } from "$lib/stores/accounts";
 	import { initExpenses } from "$lib/stores/expenses";
+	import { initTags } from "$lib/stores/tags";
 	import { bootstrapReady } from "$lib/stores/init";
 	import { initLD } from "$lib/stores/flags";
 	import { session, authReady, initAuth } from "$lib/stores/auth";
@@ -64,6 +65,7 @@
 		initLD();
 		initAccounts();
 		initExpenses();
+		initTags();
 		if ("serviceWorker" in navigator) {
 			const swUrl = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
 			navigator.serviceWorker.register(swUrl, {

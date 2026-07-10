@@ -3,21 +3,31 @@
 	import Tag from "@lucide/svelte/icons/tag";
 	import Plus from "@lucide/svelte/icons/plus";
 	import NewTagDialog from "$lib/components/NewTagDialog.svelte";
-
-	const items = [
-		{ id: "1", value: "Groceries" },
-		{ id: "2", value: "Utilities" },
-		{ id: "3", value: "Transportation" },
-		{ id: "4", value: "Dining Out" },
-		{ id: "5", value: "Entertainment" },
-		{ id: "6", value: "Healthcare" },
-	];
+	import { tags, tagsLoading, createTag } from "$lib/stores/tags";
+	import { session } from "$lib/stores/auth";
 
 	let showNewTag = $state(false);
 	let query = $state("");
 	let filtered = $derived(
-		query ? items.filter((i) => i.value.toLowerCase().includes(query.toLowerCase())) : items,
+		query
+			? $tags.filter((i) => i.value.toLowerCase().includes(query.toLowerCase()))
+			: $tags,
 	);
+
+	function resetDialog() {
+		showNewTag = false;
+		query = "";
+	}
+
+	async function handleDone() {
+		try {
+			await createTag(query, $session!.user.id);
+		} catch (e) {
+			console.error("Failed to create tag", e);
+			return;
+		}
+		resetDialog();
+	}
 </script>
 
 <div class="scroller">
@@ -38,23 +48,29 @@
 		/>
 	</div>
 
-	<div class="list">
-		{#each filtered as item}
-			<div class="row">
-				<Tag size={18} strokeWidth={2} />
-				<span class="label">{item.value}</span>
-			</div>
-		{/each}
-		{#if query && filtered.length === 0}
-			<button class="row" onclick={() => showNewTag = true}>
-				<Plus size={18} strokeWidth={2} />
-				<span class="label" style="color: var(--meta-accent);">Create New Tag</span>
-			</button>
-		{/if}
-	</div>
+	{#if $tagsLoading && $tags.length === 0}
+		<div class="spinner-wrapper">
+			<div class="spinner"></div>
+		</div>
+	{:else}
+		<div class="list">
+			{#each filtered as item}
+				<div class="row">
+					<Tag size={18} strokeWidth={2} />
+					<span class="label">{item.value}</span>
+				</div>
+			{/each}
+			{#if query && filtered.length === 0}
+				<button class="row" onclick={() => showNewTag = true}>
+					<Plus size={18} strokeWidth={2} />
+					<span class="label" style="color: var(--meta-accent);">Create New Tag</span>
+				</button>
+			{/if}
+		</div>
+	{/if}
 </div>
 
-<NewTagDialog show={showNewTag} value={query} onclose={() => showNewTag = false} ondone={() => showNewTag = false} />
+<NewTagDialog show={showNewTag} value={query} onclose={() => showNewTag = false} ondone={handleDone} />
 
 <style>
 	.scroller {
@@ -123,6 +139,26 @@
 		color: rgba(255, 255, 255, 0.25);
 	}
 
+	.spinner-wrapper {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 4rem 1rem;
+	}
+
+	.spinner {
+		width: 2rem;
+		height: 2rem;
+		border: 0.1875rem solid rgba(255, 255, 255, 0.1);
+		border-top-color: var(--meta-accent);
+		border-radius: 50%;
+		animation: spin 0.6s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+
 	.list {
 		display: flex;
 		flex-direction: column;
@@ -164,12 +200,5 @@
 	.label {
 		font-size: 0.9375rem;
 		font-weight: 500;
-	}
-
-	.empty {
-		text-align: center;
-		color: var(--meta-silver);
-		font-size: 0.875rem;
-		padding: 3rem 1rem;
 	}
 </style>
