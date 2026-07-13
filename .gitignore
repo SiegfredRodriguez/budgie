@@ -25,3 +25,6 @@ vite.config.ts.timestamp-*
 
 # PWA dev
 dev-dist/
+
+# Playwright
+playwright/.auth/

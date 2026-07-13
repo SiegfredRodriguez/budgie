@@ -1,13 +1,41 @@
-import { defineConfig } from '@playwright/test';
+import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-	webServer: {
-		command: 'npm run dev',
-		port: 5173,
-		reuseExistingServer: true,
-	},
+	testDir: 'e2e',
+	fullyParallel: true,
+	forbidOnly: !!process.env.CI,
+	retries: process.env.CI ? 2 : 0,
+	workers: process.env.CI ? 1 : undefined,
+	reporter: 'html',
 	use: {
 		baseURL: 'http://localhost:5173',
 		viewport: { width: 430, height: 932 },
+		trace: 'on-first-retry',
 	},
+	projects: [
+		{ name: 'setup', testMatch: /.*\.setup\.ts/ },
+		{
+			name: 'chromium',
+			use: {
+				...devices['Desktop Chrome'],
+				storageState: 'playwright/.auth/user.json',
+			},
+			dependencies: ['setup'],
+		},
+	],
+	webServer: [
+		{
+			command: 'npm run dev',
+			url: 'http://localhost:5173',
+			reuseExistingServer: !process.env.CI,
+			name: 'Svelte',
+		},
+		{
+			command: 'npx supabase functions serve',
+			url: 'http://127.0.0.1:54321/functions/v1/',
+			reuseExistingServer: !process.env.CI,
+			name: 'Supabase',
+			timeout: 120_000,
+		},
+	],
 });

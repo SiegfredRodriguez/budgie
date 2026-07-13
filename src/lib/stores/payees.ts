@@ -3,11 +3,13 @@ import { supabase } from "$lib/supabase";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { env } from "$env/dynamic/public";
 import { payeesReady } from "./init";
+import type { Tag } from "./tags";
 
 export interface Payee {
 	id: string;
 	label: string;
 	icon: string;
+	tags?: Tag[];
 }
 
 const initial: Payee[] = [];
@@ -16,7 +18,11 @@ export const payees = writable<Payee[]>(initial);
 export const payeesLoading = writable(false);
 
 function mapRow(r: any): Payee {
-	return { id: r.id, label: r.label, icon: r.icon ?? "" };
+	const tags = (r.payees_tags ?? [])
+		.map((pt: any) => pt.tags)
+		.filter(Boolean)
+		.map((t: any) => ({ id: t.id, value: t.value }));
+	return { id: r.id, label: r.label, icon: r.icon ?? "", tags };
 }
 
 export async function loadPayees() {
@@ -24,7 +30,7 @@ export async function loadPayees() {
 	try {
 		const { data, error } = await supabase
 			.from("payees")
-			.select("*")
+			.select("*, payees_tags(tags(*))")
 			.order("label", { ascending: true });
 		if (error) return;
 		payees.set((data ?? []).map(mapRow));
@@ -91,13 +97,18 @@ function authHeaders() {
 	};
 }
 
-export async function createPayee(label: string, icon: string) {
+export async function createPayee(
+	label: string,
+	icon: string,
+	tagIds: string[] = [],
+	userId: string,
+) {
 	const res = await fetch(
 		`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-payee`,
 		{
 			method: "POST",
 			headers: authHeaders(),
-			body: JSON.stringify({ label, icon }),
+			body: JSON.stringify({ label, icon, tagIds, user_id: userId }),
 		},
 	);
 	if (!res.ok) {
