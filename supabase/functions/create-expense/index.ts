@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { account_id, amount, label, date, user_id, currency } = await req.json();
+  const { account_id, amount, label, date, user_id, currency, payee_id, payee_label } = await req.json();
 
   if (!account_id || typeof account_id !== "string") {
     return new Response(JSON.stringify({ error: "account_id is required" }), {
@@ -66,6 +66,8 @@ Deno.serve(async (req) => {
     p_label: label,
     p_date: date,
     p_user_id: user_id,
+    p_payee_id: payee_id ?? null,
+    p_payee_label: payee_label ?? null,
     p_currency: currency || "PHP",
   });
 

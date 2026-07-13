@@ -1,18 +1,23 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
+	import X from "@lucide/svelte/icons/x";
 
 	let {
 		show,
 		accounts,
 		accountsLoading = false,
+		payees = [],
+		userId,
 		onclose,
 		onsubmit,
 	}: {
 		show: boolean;
 		accounts: Array<{ id: string; icon: string; label: string; balance: number; currency: string }>;
 		accountsLoading?: boolean;
+		payees: Array<{ id: string; label: string; icon: string }>;
+		userId: string;
 		onclose: () => void;
-		onsubmit: (data: { account_id: string; amount: number; label: string; date: string }) => void;
+		onsubmit: (data: { account_id: string; amount: number; label: string; date: string; payee_id?: string; payee_label?: string }) => void;
 	} = $props();
 
 	let amount = $state("");
@@ -23,14 +28,28 @@
 	let dateStr = $state(new Date().toISOString().slice(0, 10));
 	let busy = $state(false);
 
+	let payeeQuery = $state("");
+	let showPayeeDropdown = $state(false);
+	let selectedPayee = $state<{ id?: string; label: string; novel: boolean } | null>(null);
+
 	let selectedSource = $derived(accounts.find((a) => a.id === sourceId));
 	let filteredAccounts = $derived(
 		searchQuery
 			? accounts.filter((a) => a.label.toLowerCase().includes(searchQuery.toLowerCase()))
 			: accounts,
 	);
+	let filteredPayees = $derived(
+		payeeQuery
+			? payees.filter((p) => p.label.toLowerCase().includes(payeeQuery.toLowerCase()))
+			: payees,
+	);
+	let showCreateOption = $derived(
+		payeeQuery.trim() !== "" &&
+		!payees.some((p) => p.label.toLowerCase() === payeeQuery.trim().toLowerCase()),
+	);
 	let amountInput: HTMLInputElement | undefined = $state();
 	let searchInput: HTMLInputElement | undefined = $state();
+	let payeeInput: HTMLInputElement | undefined = $state();
 
 	function fmt(n: number, c: string): string {
 		const p = Math.abs(n).toFixed(2).split(".");
@@ -47,6 +66,9 @@
 			showSourceDropdown = false;
 			dateStr = new Date().toISOString().slice(0, 10);
 			busy = false;
+			payeeQuery = "";
+			showPayeeDropdown = false;
+			selectedPayee = null;
 			amountInput?.focus();
 		}
 	});
@@ -65,9 +87,40 @@
 		showSourceDropdown = false;
 	}
 
+	function selectExistingPayee(payee: { id: string; label: string }) {
+		selectedPayee = { id: payee.id, label: payee.label, novel: false };
+		payeeQuery = "";
+		showPayeeDropdown = false;
+	}
+
+	function selectNovelPayee(payeeLabel: string) {
+		selectedPayee = { label: payeeLabel, novel: true };
+		payeeQuery = "";
+		showPayeeDropdown = false;
+	}
+
+	function clearPayee() {
+		selectedPayee = null;
+		payeeQuery = "";
+		requestAnimationFrame(() => payeeInput?.focus());
+	}
+
+	function handlePayeeKey(e: KeyboardEvent) {
+		if (e.key === "Escape") {
+			showPayeeDropdown = false;
+		} else if (e.key === "Enter") {
+			e.preventDefault();
+			if (filteredPayees.length > 0) {
+				selectExistingPayee(filteredPayees[0]);
+			} else if (payeeQuery.trim()) {
+				selectNovelPayee(payeeQuery.trim());
+			}
+		}
+	}
+
 	async function handleSubmit() {
 		if (busy) return;
-		if (!amount || !label || !sourceId || !dateStr) return;
+		if (!amount || !label || !sourceId || !dateStr || !selectedPayee) return;
 		busy = true;
 		try {
 			await onsubmit({
@@ -75,6 +128,9 @@
 				amount: parseFloat(amount),
 				label,
 				date: dateStr,
+				...(selectedPayee.novel
+					? { payee_label: selectedPayee.label }
+					: { payee_id: selectedPayee.id }),
 			});
 			onclose();
 		} finally {
@@ -134,13 +190,52 @@
 				{/if}
 			</div>
 
+			<div class="payee-endpoint">
+				<div class="pills">
+					{#if selectedPayee}
+						<span class="pill {selectedPayee.novel ? 'pill-novel' : 'pill-existing'}">
+							{selectedPayee.novel ? '+ ' : ''}{selectedPayee.label}
+							<button class="pill-x" onclick={clearPayee} aria-label="Remove payee">
+								<X size={12} strokeWidth={3} />
+							</button>
+						</span>
+					{:else}
+						<input
+							class="pill-text"
+							type="text"
+							placeholder="Search payee…"
+							value={payeeQuery}
+							oninput={(e) => { payeeQuery = (e.target as HTMLInputElement).value; showPayeeDropdown = true; }}
+							onfocus={() => { showPayeeDropdown = true; }}
+							onblur={() => setTimeout(() => showPayeeDropdown = false, 150)}
+							onkeydown={handlePayeeKey}
+							bind:this={payeeInput}
+						/>
+					{/if}
+				</div>
+				{#if showPayeeDropdown && (filteredPayees.length > 0 || showCreateOption)}
+					<div class="source-dropdown">
+						{#each filteredPayees as payee (payee.id)}
+							<div class="source-option" role="button" tabindex="0" onmousedown={() => selectExistingPayee(payee)} onkeydown={(e) => e.key === "Enter" && selectExistingPayee(payee)}>
+								<span class="payee-label">{payee.label}</span>
+							</div>
+						{/each}
+						{#if showCreateOption}
+							<div class="source-option source-option-novel" role="button" tabindex="0" onmousedown={() => selectNovelPayee(payeeQuery.trim())} onkeydown={(e) => e.key === "Enter" && selectNovelPayee(payeeQuery.trim())}>
+								<span class="payee-label">+ Create "{payeeQuery.trim()}"</span>
+							</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
+
 			<div class="modal-row date-row">
 				<input class="modal-input date-input" type="date" value={dateStr} oninput={(e) => dateStr = (e.target as HTMLInputElement).value} />
 			</div>
 
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={handleSubmit} disabled={busy}>{busy ? "Processing..." : "Done"}</button>
+				<button class="btn btn-primary" onclick={handleSubmit} disabled={busy || !selectedPayee}>{busy ? "Processing..." : "Done"}</button>
 			</div>
 		</div>
 	</div>
@@ -308,6 +403,88 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	.payee-endpoint {
+		width: 100%;
+		position: relative;
+	}
+
+	.pills {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.375rem;
+		min-height: 2.5rem;
+		padding: 0.375rem 0.625rem;
+		border-radius: 0.625rem;
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		background: var(--meta-darker);
+		transition: border-color 0.15s;
+	}
+
+	.pills:focus-within { border-color: var(--meta-accent); }
+
+	.pill {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.1875rem 0.5rem 0.1875rem 0.625rem;
+		border-radius: 1rem;
+		font-size: 0.8125rem;
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	.pill-existing {
+		background: rgba(64, 224, 208, 0.12);
+		color: var(--meta-accent);
+	}
+
+	.pill-novel {
+		background: rgba(234, 179, 8, 0.15);
+		color: #fff;
+	}
+
+	.pill-x {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 1rem;
+		height: 1rem;
+		border-radius: 50%;
+		border: none;
+		background: transparent;
+		color: inherit;
+		cursor: pointer;
+		padding: 0;
+		transition: background 0.1s;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.pill-x:hover { background: rgba(255, 255, 255, 0.15); }
+
+	.pill-text {
+		flex: 1;
+		min-width: 5rem;
+		background: transparent;
+		border: none;
+		outline: none;
+		color: var(--meta-light);
+		font-size: 0.875rem;
+		padding: 0.125rem 0;
+	}
+
+	.pill-text::placeholder { color: rgba(255, 255, 255, 0.25); }
+
+	.payee-label {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--meta-light);
+	}
+
+	.source-option-novel .payee-label {
+		color: #eab308;
 	}
 
 	.date-row {

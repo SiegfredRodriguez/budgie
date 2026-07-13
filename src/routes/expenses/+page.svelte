@@ -2,6 +2,7 @@
 	import { goto } from "$app/navigation";
 	import { accounts, accountsLoading } from "$lib/stores/accounts";
 	import { expenses, loadExpenses } from "$lib/stores/expenses";
+	import { payees, loadPayees } from "$lib/stores/payees";
 	import { session } from "$lib/stores/auth";
 	import { env } from '$env/dynamic/public';
 	import ExpenseHero from "$lib/components/ExpenseHero.svelte";
@@ -55,7 +56,7 @@
 		showDialog = false;
 	}
 
-	async function handleCreateExpense(data: { account_id: string; amount: number; label: string; date: string }) {
+	async function handleCreateExpense(data: { account_id: string; amount: number; label: string; date: string; payee_id?: string; payee_label?: string }) {
 		const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-expense`, {
 			method: 'POST',
 		headers: {
@@ -69,6 +70,8 @@
 				label: data.label,
 				date: data.date,
 				user_id: $session!.user.id,
+				payee_id: data.payee_id ?? null,
+				payee_label: data.payee_label ?? null,
 			}),
 		});
 		if (!res.ok) {
@@ -76,7 +79,7 @@
 			throw new Error(err.error);
 		}
 		closeDialog();
-		await loadExpenses();
+		await Promise.all([loadExpenses(), loadPayees()]);
 	}
 </script>
 
@@ -122,7 +125,7 @@
 	</div>
 </div>
 
-<NewExpenseDialog show={showDialog} accounts={$accounts} accountsLoading={$accountsLoading} onclose={closeDialog} onsubmit={handleCreateExpense} />
+<NewExpenseDialog show={showDialog} accounts={$accounts} accountsLoading={$accountsLoading} payees={$payees} userId={$session!.user.id} onclose={closeDialog} onsubmit={handleCreateExpense} />
 
 <style>
 	.pill-btn {
