@@ -60,7 +60,16 @@
 					<div class="row-icon">
 						<Icon name={item.icon || "store"} />
 					</div>
-					<span class="label">{item.label}</span>
+					<div class="row-content">
+						<span class="label">{item.label}</span>
+						{#if item.tags?.length}
+							<div class="tag-pills">
+								{#each item.tags as tag}
+									<span class="tag-pill">{tag.value}</span>
+								{/each}
+							</div>
+						{/if}
+					</div>
 				</div>
 			{/each}
 			{#if filtered.length === 0}
@@ -191,7 +200,7 @@
 
 	.row {
 		display: flex;
-		align-items: center;
+		align-items: flex-start;
 		gap: 0.75rem;
 		padding: 0.875rem 1rem;
 		background: rgba(255, 255, 255, 0.04);
@@ -204,10 +213,38 @@
 		width: 1.5rem;
 		height: 1.5rem;
 		flex-shrink: 0;
+		margin-top: 0.0625rem;
+	}
+
+	.row-content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.375rem;
+		min-width: 0;
+		flex: 1;
 	}
 
 	.label {
 		font-size: 0.9375rem;
 		font-weight: 500;
+	}
+
+	.tag-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+
+	.tag-pill {
+		display: inline-block;
+		padding: 0.125rem 0.5rem;
+		border-radius: 0.75rem;
+		border: 0.0625rem solid var(--meta-blue);
+		background: transparent;
+		color: var(--meta-blue);
+		font-size: 0.75rem;
+		font-weight: 500;
+		line-height: 1.25;
+		white-space: nowrap;
 	}
 </style>
