@@ -7,10 +7,13 @@
     import TopUpDialog from "$lib/components/TopUpDialog.svelte";
     import TransferDialog from "$lib/components/TransferDialog.svelte";
     import NewAccountDialog from "$lib/components/NewAccountDialog.svelte";
+    import Eye from "@lucide/svelte/icons/eye";
+    import EyeOff from "@lucide/svelte/icons/eye-off";
 
     let scrollTop = $state(0);
     let headerHeight = $state(250);
     let scroller: HTMLElement;
+    let heroCensored = $state(true);
 
     let total = $derived($accounts.reduce((sum, a) => sum + a.balance, 0));
     let count = $derived($accounts.length);
@@ -139,7 +142,16 @@
         <div class="hero-overlay"></div>
         <img class="hero-img" src="/hero-accounts.png" alt="" width="860" height="500" />
         <div class="summary">
-            <div class="summary-total">{formatBalance(total, "PHP")}</div>
+            <div class="summary-total-row">
+                <div class="summary-total">{heroCensored ? "••••••" : formatBalance(total, "PHP")}</div>
+                <button class="eye-btn" onclick={() => heroCensored = !heroCensored} aria-label={heroCensored ? "Show total" : "Hide total"}>
+                    {#if heroCensored}
+                        <EyeOff size={18} />
+                    {:else}
+                        <Eye size={18} />
+                    {/if}
+                </button>
+            </div>
             <div class="summary-sub">{count} {count === 1 ? "account" : "accounts"}</div>
         </div>
     </div>
@@ -225,12 +237,35 @@
         padding-top: 4rem;
     }
 
+    .summary-total-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
     .summary-total {
         font-size: 2rem;
         font-weight: 800;
         color: var(--meta-light);
         letter-spacing: 0.02em;
         text-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.5);
+    }
+
+    .eye-btn {
+        background: none;
+        border: none;
+        color: var(--meta-silver);
+        cursor: pointer;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .eye-btn:active {
+        color: var(--meta-light);
     }
 
     .summary-sub {
