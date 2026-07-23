@@ -2,7 +2,7 @@
     import Icon from "./Icon.svelte";
     import { flags } from "$lib/stores/flags";
     import Eye from "@lucide/svelte/icons/eye";
-    import EyeOff from "@lucide/svelte/icons/eye-off";
+    import EyeClosed from "@lucide/svelte/icons/eye-closed";
 
     let {
         id,
@@ -69,9 +69,9 @@
         <div class="card-balance">{censored ? "••••••" : fmt(balance, currency)}</div>
         <button class="eye-btn" onclick={() => censored = !censored} aria-label={censored ? "Show balance" : "Hide balance"}>
             {#if censored}
-                <EyeOff size={16} />
-            {:else}
                 <Eye size={16} />
+            {:else}
+                <EyeClosed size={16} />
             {/if}
         </button>
     </div>

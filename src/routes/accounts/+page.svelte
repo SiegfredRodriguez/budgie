@@ -8,7 +8,7 @@
     import TransferDialog from "$lib/components/TransferDialog.svelte";
     import NewAccountDialog from "$lib/components/NewAccountDialog.svelte";
     import Eye from "@lucide/svelte/icons/eye";
-    import EyeOff from "@lucide/svelte/icons/eye-off";
+    import EyeClosed from "@lucide/svelte/icons/eye-closed";
 
     let scrollTop = $state(0);
     let headerHeight = $state(250);
@@ -146,9 +146,9 @@
                 <div class="summary-total">{heroCensored ? "••••••" : formatBalance(total, "PHP")}</div>
                 <button class="eye-btn" onclick={() => heroCensored = !heroCensored} aria-label={heroCensored ? "Show total" : "Hide total"}>
                     {#if heroCensored}
-                        <EyeOff size={18} />
-                    {:else}
                         <Eye size={18} />
+                    {:else}
+                        <EyeClosed size={18} />
                     {/if}
                 </button>
             </div>
@@ -209,6 +209,7 @@
         position: relative;
         overflow: hidden;
         will-change: transform;
+        z-index: 3;
     }
 
     .hero-img {
@@ -232,8 +233,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        z-index: 2;
-        pointer-events: none;
+        z-index: 3;
         padding-top: 4rem;
     }
 
@@ -249,6 +249,7 @@
         color: var(--meta-light);
         letter-spacing: 0.02em;
         text-shadow: 0 0.125rem 0.75rem rgba(0, 0, 0, 0.5);
+        pointer-events: none;
     }
 
     .eye-btn {
@@ -256,7 +257,7 @@
         border: none;
         color: var(--meta-silver);
         cursor: pointer;
-        padding: 0.25rem;
+        padding: 0.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -274,6 +275,7 @@
         color: var(--meta-silver);
         margin-top: 0.25rem;
         text-shadow: 0 0.0625rem 0.375rem rgba(0, 0, 0, 0.4);
+        pointer-events: none;
     }
 
     .card-list {
