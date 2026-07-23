@@ -2,6 +2,7 @@
 	import { page } from "$app/stores";
 	import BanknoteArrowDown from "@lucide/svelte/icons/banknote-arrow-down";
 	import Wallet from "@lucide/svelte/icons/wallet";
+	import Settings from "@lucide/svelte/icons/settings";
 </script>
 
 <nav class="tab-bar">
@@ -12,6 +13,10 @@
 	<a href="/accounts" class="tab" class:active={$page.url.pathname === "/accounts"}>
 		<Wallet size={24} />
 		<span class="tab-label">Accounts</span>
+	</a>
+	<a href="/settings" class="tab" class:active={$page.url.pathname === "/settings"}>
+		<Settings size={24} />
+		<span class="tab-label">Settings</span>
 	</a>
 </nav>
 

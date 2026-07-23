@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { signInWithGoogle } from '$lib/stores/auth';
+	import { supabase } from '$lib/supabase';
 	import { dev } from '$app/environment';
+	import Fingerprint from '@lucide/svelte/icons/fingerprint';
 
 	let loading = $state(false);
+	let passkeyLoading = $state(false);
 
 	async function handleGoogle() {
 		loading = true;
@@ -10,6 +13,16 @@
 			await signInWithGoogle();
 		} catch {
 			loading = false;
+		}
+	}
+
+	async function handlePasskey() {
+		passkeyLoading = true;
+		try {
+			const { error } = await supabase.auth.signInWithPasskey();
+			if (error) throw error;
+		} catch {
+			passkeyLoading = false;
 		}
 	}
 </script>
@@ -33,6 +46,13 @@
 				<path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
 			</svg>
 			{loading ? 'Signing in...' : 'Continue with Google'}
+		</button>
+
+		<div class="divider">or</div>
+
+		<button class="passkey-btn" onclick={handlePasskey} disabled={passkeyLoading}>
+			<Fingerprint size={20} />
+			{passkeyLoading ? 'Signing in...' : 'Sign in with Passkey'}
 		</button>
 
 		{#if dev}
@@ -112,6 +132,58 @@
 		width: 1.375rem;
 		height: 1.375rem;
 		flex-shrink: 0;
+	}
+
+	.divider {
+		font-size: 0.75rem;
+		color: var(--meta-silver);
+		position: relative;
+		text-align: center;
+	}
+
+	.divider::before,
+	.divider::after {
+		content: '';
+		position: absolute;
+		top: 50%;
+		width: calc(50% - 1.5rem);
+		height: 0.0625rem;
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.divider::before {
+		left: 0;
+	}
+
+	.divider::after {
+		right: 0;
+	}
+
+	.passkey-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.625rem;
+		width: 100%;
+		height: 3rem;
+		border-radius: 0.75rem;
+		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
+		background: rgba(255, 255, 255, 0.05);
+		color: var(--meta-light);
+		font-size: 1rem;
+		font-weight: 600;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		transition: background 0.15s;
+	}
+
+	.passkey-btn:active {
+		background: rgba(255, 255, 255, 0.1);
+	}
+
+	.passkey-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.dev-hint {
