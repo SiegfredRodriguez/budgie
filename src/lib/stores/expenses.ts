@@ -10,6 +10,10 @@ export interface Expense {
 	accountId: string;
 	currency: string;
 	createdAt: string;
+	payeeId: string | null;
+	payeeLabel: string | null;
+	payeeIcon: string | null;
+	tags: { id: string; value: string }[];
 }
 
 const initial: Expense[] = [];
@@ -26,6 +30,10 @@ function mapRow(t: any): Expense {
 		accountId: t.transaction.account_id,
 		currency: t.transaction.currency,
 		createdAt: t.transaction.created_at,
+		payeeId: t.payee?.id ?? null,
+		payeeLabel: t.payee?.label ?? null,
+		payeeIcon: t.payee?.icon ?? null,
+		tags: (t.expense_tags ?? []).map((et: any) => et.tag).filter(Boolean),
 	};
 }
 
@@ -34,7 +42,7 @@ export async function loadExpenses() {
 	try {
 		const { data, error } = await supabase
 			.from('expense_details')
-			.select('id, label, date, transaction:transaction_id!inner(amount, currency, account_id, created_at)')
+			.select('id, label, date, payee:payee_id(id, label, icon), expense_tags:expenses_tags!expense_id(tag:tag_id(id, value)), transaction:transaction_id!inner(amount, currency, account_id, created_at)')
 			.eq('transaction.type', 'EXPENSE');
 		if (error || !data) return;
 		expenses.set(
