@@ -1,6 +1,8 @@
 <script lang="ts">
     import Icon from "./Icon.svelte";
     import { flags } from "$lib/stores/flags";
+    import Eye from "@lucide/svelte/icons/eye";
+    import EyeClosed from "@lucide/svelte/icons/eye-closed";
 
     let {
         id,
@@ -24,6 +26,7 @@
         onlongpress?: (id: string) => void;
     } = $props();
 
+    let censored = $state(true);
     let lpTimer: ReturnType<typeof setTimeout> | undefined;
 
     function fmt(n: number, c: string): string {
@@ -62,7 +65,16 @@
         <span class="card-label">{label}</span>
     </div>
 
-    <div class="card-balance">{fmt(balance, currency)}</div>
+    <div class="card-balance-row">
+        <div class="card-balance">{censored ? "••••••" : fmt(balance, currency)}</div>
+        <button class="eye-btn" onclick={() => censored = !censored} aria-label={censored ? "Show balance" : "Hide balance"}>
+            {#if censored}
+                <Eye size={16} />
+            {:else}
+                <EyeClosed size={16} />
+            {/if}
+        </button>
+    </div>
 
     <div class="card-actions">
         <button class="btn btn-primary" onclick={() => ontopup(id)}
@@ -136,13 +148,36 @@
         color: var(--meta-light);
     }
 
+    .card-balance-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
     .card-balance {
         font-size: 1.5625rem;
         font-weight: 700;
         font-family: 'Montserrat', sans-serif;
         color: var(--meta-accent);
-        text-align: center;
         letter-spacing: 0.01em;
+    }
+
+    .eye-btn {
+        background: none;
+        border: none;
+        color: var(--meta-silver);
+        cursor: pointer;
+        padding: 0.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .eye-btn:active {
+        color: var(--meta-light);
     }
 
     .card-actions {
