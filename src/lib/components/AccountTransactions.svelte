@@ -177,7 +177,7 @@
     .back-btn {
         position: absolute;
         left: 1.25rem;
-        top: 1rem;
+        top: calc(1rem + env(safe-area-inset-top));
         width: 2rem;
         height: 2rem;
         border: none;
@@ -234,7 +234,7 @@
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         padding: 0.5rem 1.25rem;
-        padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+        padding-bottom: calc(6rem + env(safe-area-inset-bottom));
     }
 
     .panel-empty {
