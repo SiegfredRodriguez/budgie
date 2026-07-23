@@ -11,6 +11,7 @@
         ontopup,
         ontransfer,
         ondelete,
+        onlongpress,
     }: {
         id: string;
         icon: string;
@@ -20,7 +21,10 @@
         ontopup: (id: string) => void;
         ontransfer: (id: string) => void;
         ondelete: (id: string) => void;
+        onlongpress?: (id: string) => void;
     } = $props();
+
+    let lpTimer: ReturnType<typeof setTimeout> | undefined;
 
     function fmt(n: number, c: string): string {
         const abs = Math.abs(n);
@@ -28,9 +32,31 @@
         p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         return `${c} ${n < 0 ? "-" : ""}${p[0]}.${p[1]}`;
     }
+
+    function startLongPress() {
+        if (!$flags["transaction-history"] || !onlongpress) return;
+        lpTimer = setTimeout(() => {
+            lpTimer = undefined;
+            onlongpress(id);
+        }, 500);
+    }
+
+    function cancelLongPress() {
+        if (lpTimer !== undefined) {
+            clearTimeout(lpTimer);
+            lpTimer = undefined;
+        }
+    }
 </script>
 
-<div class="card">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+    class="card"
+    onpointerdown={startLongPress}
+    onpointerup={cancelLongPress}
+    onpointercancel={cancelLongPress}
+    onpointerleave={cancelLongPress}
+>
     <div class="card-top">
         <div class="card-icon"><Icon name={icon} /></div>
         <span class="card-label">{label}</span>
@@ -77,6 +103,9 @@
         background: var(--meta-dark);
         border-radius: 0.875rem;
         border: 0.0625rem solid rgba(255, 255, 255, 0.06);
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
     }
 
     .card-top {

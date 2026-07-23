@@ -37,6 +37,38 @@
 		return `${c} ${p[0]}.${p[1]}`;
 	}
 
+	function toLocalDate(d: string): string {
+		const date = new Date(d + 'T00:00:00');
+		return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+	}
+
+	function dateLabel(d: string): string {
+		const date = new Date(d + 'T00:00:00');
+		const now = new Date();
+		const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const ts = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+		const diff = today.getTime() - ts.getTime();
+		const days = Math.floor(diff / 86400000);
+		if (days === 0) return "Today";
+		if (days === 1) return "Yesterday";
+		return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+	}
+
+	let grouped = $derived(() => {
+		const map = new Map<string, typeof $expenses>();
+		for (const item of $expenses) {
+			const key = toLocalDate(item.date);
+			const arr = map.get(key);
+			if (arr) arr.push(item);
+			else map.set(key, [item]);
+		}
+		const groups: { date: string; label: string; items: typeof $expenses }[] = [];
+		for (const [date, items] of map) {
+			groups.push({ date, label: dateLabel(items[0].date), items });
+		}
+		return groups;
+	});
+
 	let scrollTop = $state(0);
 	let headerHeight = $state(250);
 	let scroller: HTMLElement;
@@ -119,8 +151,18 @@
 	<ExpenseHero total={fmt(currentMonthExpenses)} count={currentMonthCount} {scrollTop} height={headerHeight} />
 
 	<div class="list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-		{#each $expenses as item}
-			<ExpenseItem label={item.label} formatted={`-${fmt(item.amount, item.currency)}`} current={isCurrentMonth(item.date)} />
+		{#each grouped() as group}
+			<div class="date-header">{group.label}</div>
+			{#each group.items as item}
+				<ExpenseItem
+					label={item.label}
+					formatted={fmt(item.amount, item.currency)}
+					current={isCurrentMonth(item.date)}
+					payeeLabel={item.payeeLabel}
+					payeeIcon={item.payeeIcon}
+					tags={item.tags}
+				/>
+			{/each}
 		{/each}
 	</div>
 </div>
@@ -276,5 +318,19 @@
 		padding-left: 1rem;
 		padding-right: 1rem;
 		padding-bottom: 6rem;
+	}
+
+	.date-header {
+		font-size: 0.75rem;
+		font-weight: 600;
+		font-family: "Poppins", sans-serif;
+		color: var(--meta-silver);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding: 0.75rem 0 0.375rem;
+	}
+
+	.date-header:first-child {
+		padding-top: 0.25rem;
 	}
 </style>
