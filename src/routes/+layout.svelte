@@ -11,6 +11,8 @@
 	import { bootstrapReady } from "$lib/stores/init";
 	import { initLD } from "$lib/stores/flags";
 	import { session, authReady, initAuth } from "$lib/stores/auth";
+	import { supabase } from "$lib/supabase";
+	import { dev } from "$app/environment";
 	import TabBar from "$lib/components/TabBar.svelte";
 
 
@@ -18,6 +20,7 @@
 
 	let splashDone = $state(false);
 	let splashStart = $state(Date.now());
+	let passkeyAttempted = $state(false);
 
 	let authProtected = $derived.by(() => {
 		const path = $page.url.pathname;
@@ -27,7 +30,22 @@
 	$effect(() => {
 		if (!$authReady) return;
 
-		if (!$session && authProtected) {
+		if (!$session && authProtected && !passkeyAttempted && !dev) {
+			passkeyAttempted = true;
+			supabase.auth.signInWithPasskey().then(({ error }) => {
+				if (error) {
+					splashDone = true;
+					goto("/login");
+				}
+			}).catch(() => {
+				splashDone = true;
+				goto("/login");
+			});
+			return;
+		}
+
+		if (!$session && authProtected && passkeyAttempted) {
+			splashDone = true;
 			goto("/login");
 		} else if ($session && ($page.url.pathname === "/" || $page.url.pathname === "/login")) {
 			goto("/expenses");
@@ -35,7 +53,7 @@
 	});
 
 	$effect(() => {
-		if ($bootstrapReady && splashStart > 0) {
+		if ($session && splashStart > 0) {
 			const elapsed = Date.now() - splashStart;
 			const remaining = Math.max(0, 2000 - elapsed);
 			setTimeout(() => splashDone = true, remaining);
