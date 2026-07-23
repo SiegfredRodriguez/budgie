@@ -3,6 +3,7 @@
     import { accounts, topUpAccount, transferAccount, deleteAccount } from "$lib/stores/accounts";
     import { session } from "$lib/stores/auth";
     import AccountCard from "$lib/components/AccountCard.svelte";
+    import AccountTransactions from "$lib/components/AccountTransactions.svelte";
     import TopUpDialog from "$lib/components/TopUpDialog.svelte";
     import TransferDialog from "$lib/components/TransferDialog.svelte";
 
@@ -28,6 +29,10 @@
     let transferTarget = $derived($accounts.find((a) => a.id === transferTargetId));
     let transferOtherAccounts = $derived($accounts.filter((a) => a.id !== transferSourceId));
 
+    let showTransactions = $state(false);
+    let selectedAccountId = $state("");
+    let selectedAccount = $derived($accounts.find((a) => a.id === selectedAccountId));
+
     function openTransfer(id: string) {
         transferSourceId = id;
         transferAmount = "";
@@ -50,6 +55,11 @@
 
     function selectTarget(id: string) {
         transferTargetId = id;
+    }
+
+    function openTransactions(id: string) {
+        selectedAccountId = id;
+        showTransactions = true;
     }
 
     function openTopUp(id: string) {
@@ -116,6 +126,7 @@
                 ontopup={openTopUp}
                 ontransfer={openTransfer}
                 ondelete={handleDelete}
+                onlongpress={openTransactions}
             />
         {/each}
     </div>
@@ -139,6 +150,12 @@
     onamount={(v) => transferAmount = v}
     onselect={selectTarget}
 />
+{#if showTransactions && selectedAccount}
+    <AccountTransactions
+        account={selectedAccount}
+        onclose={() => showTransactions = false}
+    />
+{/if}
 
 <style>
     .scroller {
