@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { fly } from "svelte/transition";
     import { supabase } from "$lib/supabase";
     import Icon from "./Icon.svelte";
     import TransactionTile from "./TransactionTile.svelte";
@@ -99,7 +100,12 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="overlay" onclick={handleOverlay} onkeydown={handleKey}>
+<div
+    class="overlay"
+    transition:fly={{ y: "100%", duration: 150 }}
+    onclick={handleOverlay}
+    onkeydown={handleKey}
+>
     <div class="panel" role="dialog" aria-modal="true" tabindex="-1">
         <div class="panel-header">
             <button class="back-btn" onclick={onclose}>
