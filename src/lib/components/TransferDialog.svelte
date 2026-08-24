@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
 	import { formatBalance } from "$lib/format";
+	import Dialog from "./Dialog.svelte";
 
 	let {
 		show,
@@ -13,9 +14,17 @@
 		onselect,
 	}: {
 		show: boolean;
-		source: { id: string; balance: number; currency: string; icon: string; label: string } | undefined;
-		target: { id: string; balance: number; currency: string; icon: string; label: string } | undefined;
-		otherAccounts: Array<{ id: string; icon: string; label: string; currency: string; balance: number }>;
+		source:
+			{ id: string; balance: number; currency: string; icon: string; label: string } | undefined;
+		target:
+			{ id: string; balance: number; currency: string; icon: string; label: string } | undefined;
+		otherAccounts: Array<{
+			id: string;
+			icon: string;
+			label: string;
+			currency: string;
+			balance: number;
+		}>;
 		onclose: () => void;
 		ondone: () => void;
 		onamount: (v: string) => void;
@@ -46,14 +55,6 @@
 		}
 	});
 
-	function handleOverlay(e: MouseEvent) {
-		if (e.target === e.currentTarget) onclose();
-	}
-
-	function handleKey(e: KeyboardEvent) {
-		if (e.key === "Escape") onclose();
-	}
-
 	function selectTarget(id: string) {
 		onselect(id);
 		searchQuery = "";
@@ -71,8 +72,8 @@
 	}
 </script>
 
-{#if show && source}
-	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
+<Dialog {show} {onclose}>
+	{#if source}
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
 			<div class="transfer-widget">
 				<div class="transfer-source">
@@ -92,29 +93,43 @@
 					<input
 						class="source-combo-input"
 						type="text"
-						placeholder={selectedTarget && searchQuery === "" ? selectedTarget.label : "Search account…"}
+						placeholder={selectedTarget && searchQuery === ""
+							? selectedTarget.label
+							: "Search account…"}
 						value={searchQuery}
 						oninput={(e) => {
 							searchQuery = (e.target as HTMLInputElement).value;
 							if (searchQuery && selectedTarget) onselect("");
 							showDropdown = true;
 						}}
-						onfocus={() => { showDropdown = true; }}
-						onblur={() => setTimeout(() => showDropdown = false, 150)}
+						onfocus={() => {
+							showDropdown = true;
+						}}
+						onblur={() => setTimeout(() => (showDropdown = false), 150)}
 						bind:this={searchInput}
 					/>
 					{#if selectedTarget && searchQuery === ""}
-						<span class="source-combo-balance">{formatBalance(selectedTarget.balance, selectedTarget.currency, "none")}</span>
+						<span class="source-combo-balance"
+							>{formatBalance(selectedTarget.balance, selectedTarget.currency, "none")}</span
+						>
 					{/if}
 				</div>
 				{#if showDropdown && filteredAccounts.length > 0}
 					<div class="source-dropdown">
 						{#each filteredAccounts as acct}
-							<div class="source-option" role="button" tabindex="0" onclick={() => selectTarget(acct.id)} onkeydown={(e) => e.key === "Enter" && selectTarget(acct.id)}>
+							<div
+								class="source-option"
+								role="button"
+								tabindex="0"
+								onclick={() => selectTarget(acct.id)}
+								onkeydown={(e) => e.key === "Enter" && selectTarget(acct.id)}
+							>
 								<div class="source-option-icon"><Icon name={acct.icon} /></div>
 								<div class="source-option-text">
 									<span class="source-option-label">{acct.label}</span>
-									<span class="source-option-balance">{formatBalance(acct.balance, acct.currency, "none")}</span>
+									<span class="source-option-balance"
+										>{formatBalance(acct.balance, acct.currency, "none")}</span
+									>
 								</div>
 							</div>
 						{/each}
@@ -123,7 +138,22 @@
 			</div>
 
 			<div class="modal-row">
-				<input class="modal-input" type="number" inputmode="numeric" placeholder="Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } onamount(v); }} />
+				<input
+					class="modal-input"
+					type="number"
+					inputmode="numeric"
+					placeholder="Amount"
+					value={amount}
+					oninput={(e) => {
+						const el = e.target as HTMLInputElement;
+						let v = el.value;
+						if (v.startsWith("-")) {
+							v = v.replace("-", "");
+							el.value = v;
+						}
+						onamount(v);
+					}}
+				/>
 			</div>
 			{#if overBalance}
 				<div class="modal-error">Transfer amount exceeds available balance</div>
@@ -131,26 +161,15 @@
 
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={handleDone} disabled={overBalance || busy}>{busy ? "Processing..." : "Transfer"}</button>
+				<button class="btn btn-primary" onclick={handleDone} disabled={overBalance || busy}
+					>{busy ? "Processing..." : "Transfer"}</button
+				>
 			</div>
 		</div>
-	</div>
-{/if}
+	{/if}
+</Dialog>
 
 <style>
-	.overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.6);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 300;
-		-webkit-backdrop-filter: blur(0.25rem);
-		backdrop-filter: blur(0.25rem);
-		padding: 1.5rem;
-	}
-
 	.modal {
 		background: var(--meta-dark);
 		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
@@ -221,7 +240,9 @@
 		transition: border-color 0.15s;
 	}
 
-	.source-combo:focus-within { border-color: var(--meta-accent); }
+	.source-combo:focus-within {
+		border-color: var(--meta-accent);
+	}
 
 	.source-combo-icon {
 		width: 1.75rem;
@@ -243,7 +264,9 @@
 		min-width: 0;
 	}
 
-	.source-combo-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+	.source-combo-input::placeholder {
+		color: rgba(255, 255, 255, 0.35);
+	}
 
 	.source-combo-balance {
 		font-size: 0.6875rem;
@@ -279,8 +302,12 @@
 		outline: none;
 	}
 
-	.source-option:hover { background: rgba(255, 255, 255, 0.05); }
-	.source-option:focus-visible { outline: none; }
+	.source-option:hover {
+		background: rgba(255, 255, 255, 0.05);
+	}
+	.source-option:focus-visible {
+		outline: none;
+	}
 
 	.source-option-icon {
 		width: 1.75rem;
@@ -334,8 +361,12 @@
 		transition: border-color 0.15s;
 	}
 
-	.modal-input:focus { border-color: var(--meta-accent); }
-	.modal-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+	.modal-input:focus {
+		border-color: var(--meta-accent);
+	}
+	.modal-input::placeholder {
+		color: rgba(255, 255, 255, 0.25);
+	}
 
 	.modal-error {
 		font-size: 0.75rem;
@@ -367,7 +398,9 @@
 		transition: opacity 0.15s;
 	}
 
-	.btn:active { opacity: 0.7; }
+	.btn:active {
+		opacity: 0.7;
+	}
 
 	.btn-primary {
 		color: var(--meta-darker);

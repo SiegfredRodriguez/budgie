@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
 	import X from "@lucide/svelte/icons/x";
+	import Dialog from "./Dialog.svelte";
 	import { notifyError } from "$lib/stores/snackbar";
 	import { formatBalance } from "$lib/format";
 
@@ -17,7 +18,14 @@
 		accountsLoading?: boolean;
 		payees: Array<{ id: string; label: string; icon: string }>;
 		onclose: () => void;
-		onsubmit: (data: { account_id: string; amount: number; label: string; date: string; payee_id?: string; payee_label?: string }) => void;
+		onsubmit: (data: {
+			account_id: string;
+			amount: number;
+			label: string;
+			date: string;
+			payee_id?: string;
+			payee_label?: string;
+		}) => void;
 	} = $props();
 
 	let amount = $state("");
@@ -45,7 +53,7 @@
 	);
 	let showCreateOption = $derived(
 		payeeQuery.trim() !== "" &&
-		!payees.some((p) => p.label.toLowerCase() === payeeQuery.trim().toLowerCase()),
+			!payees.some((p) => p.label.toLowerCase() === payeeQuery.trim().toLowerCase()),
 	);
 	let amountInput: HTMLInputElement | undefined = $state();
 	let searchInput: HTMLInputElement | undefined = $state();
@@ -66,14 +74,6 @@
 			amountInput?.focus();
 		}
 	});
-
-	function handleOverlay(e: MouseEvent) {
-		if (e.target === e.currentTarget) onclose();
-	}
-
-	function handleKey(e: KeyboardEvent) {
-		if (e.key === "Escape") onclose();
-	}
 
 	function selectSource(id: string) {
 		sourceId = id;
@@ -135,122 +135,167 @@
 	}
 </script>
 
-{#if show}
-	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
-		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
-			<div class="modal-row">
-				<input class="modal-input" type="number" inputmode="numeric" placeholder="Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } amount = v; }} bind:this={amountInput} />
-			</div>
+<Dialog {show} {onclose}>
+	<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+		<div class="modal-row">
+			<input
+				class="modal-input"
+				type="number"
+				inputmode="numeric"
+				placeholder="Amount"
+				value={amount}
+				oninput={(e) => {
+					const el = e.target as HTMLInputElement;
+					let v = el.value;
+					if (v.startsWith("-")) {
+						v = v.replace("-", "");
+						el.value = v;
+					}
+					amount = v;
+				}}
+				bind:this={amountInput}
+			/>
+		</div>
 
-			<div class="modal-row">
-				<input class="modal-input" type="text" placeholder="Label" value={label} oninput={(e) => label = (e.target as HTMLInputElement).value} />
-			</div>
+		<div class="modal-row">
+			<input
+				class="modal-input"
+				type="text"
+				placeholder="Label"
+				value={label}
+				oninput={(e) => (label = (e.target as HTMLInputElement).value)}
+			/>
+		</div>
 
-			<div class="source-endpoint">
-				<div class="source-combo">
-					<div class="source-combo-icon">
-						{#if searchQuery === "" && selectedSource}
-							<Icon name={selectedSource.icon} />
-						{/if}
-					</div>
+		<div class="source-endpoint">
+			<div class="source-combo">
+				<div class="source-combo-icon">
+					{#if searchQuery === "" && selectedSource}
+						<Icon name={selectedSource.icon} />
+					{/if}
+				</div>
+				<input
+					class="source-combo-input"
+					type="text"
+					placeholder={selectedSource && searchQuery === ""
+						? selectedSource.label
+						: "Search account…"}
+					value={searchQuery}
+					oninput={(e) => {
+						searchQuery = (e.target as HTMLInputElement).value;
+						if (searchQuery) sourceId = "";
+						showSourceDropdown = true;
+					}}
+					onfocus={() => {
+						showSourceDropdown = true;
+					}}
+					onblur={() => setTimeout(() => (showSourceDropdown = false), 150)}
+					bind:this={searchInput}
+				/>
+				{#if selectedSource && searchQuery === ""}
+					<span class="source-combo-balance"
+						>{formatBalance(selectedSource.balance, selectedSource.currency, "none")}</span
+					>
+				{/if}
+			</div>
+			{#if showSourceDropdown && filteredAccounts.length > 0}
+				<div class="source-dropdown">
+					{#each filteredAccounts as acct}
+						<div
+							class="source-option"
+							role="button"
+							tabindex="0"
+							onclick={() => selectSource(acct.id)}
+							onkeydown={(e) => e.key === "Enter" && selectSource(acct.id)}
+						>
+							<div class="source-option-icon"><Icon name={acct.icon} /></div>
+							<div class="source-option-text">
+								<span class="source-option-label">{acct.label}</span>
+								<span class="source-option-balance"
+									>{formatBalance(acct.balance, acct.currency, "none")}</span
+								>
+							</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
+
+		<div class="payee-endpoint">
+			<div class="pills">
+				{#if selectedPayee}
+					<span class="pill {selectedPayee.novel ? 'pill-novel' : 'pill-existing'}">
+						{selectedPayee.novel ? "+ " : ""}{selectedPayee.label}
+						<button class="pill-x" onclick={clearPayee} aria-label="Remove payee">
+							<X size={12} strokeWidth={3} />
+						</button>
+					</span>
+				{:else}
 					<input
-						class="source-combo-input"
+						class="pill-text"
 						type="text"
-						placeholder={selectedSource && searchQuery === "" ? selectedSource.label : "Search account…"}
-						value={searchQuery}
+						placeholder="Search payee…"
+						value={payeeQuery}
 						oninput={(e) => {
-							searchQuery = (e.target as HTMLInputElement).value;
-							if (searchQuery) sourceId = "";
-							showSourceDropdown = true;
+							payeeQuery = (e.target as HTMLInputElement).value;
+							showPayeeDropdown = true;
 						}}
-						onfocus={() => { showSourceDropdown = true; }}
-						onblur={() => setTimeout(() => showSourceDropdown = false, 150)}
-						bind:this={searchInput}
+						onfocus={() => {
+							showPayeeDropdown = true;
+						}}
+						onblur={() => setTimeout(() => (showPayeeDropdown = false), 150)}
+						onkeydown={handlePayeeKey}
+						bind:this={payeeInput}
 					/>
-					{#if selectedSource && searchQuery === ""}
-						<span class="source-combo-balance">{formatBalance(selectedSource.balance, selectedSource.currency, "none")}</span>
-					{/if}
-				</div>
-				{#if showSourceDropdown && filteredAccounts.length > 0}
-					<div class="source-dropdown">
-						{#each filteredAccounts as acct}
-							<div class="source-option" role="button" tabindex="0" onclick={() => selectSource(acct.id)} onkeydown={(e) => e.key === "Enter" && selectSource(acct.id)}>
-								<div class="source-option-icon"><Icon name={acct.icon} /></div>
-								<div class="source-option-text">
-									<span class="source-option-label">{acct.label}</span>
-									<span class="source-option-balance">{formatBalance(acct.balance, acct.currency, "none")}</span>
-								</div>
-							</div>
-						{/each}
-					</div>
 				{/if}
 			</div>
-
-			<div class="payee-endpoint">
-				<div class="pills">
-					{#if selectedPayee}
-						<span class="pill {selectedPayee.novel ? 'pill-novel' : 'pill-existing'}">
-							{selectedPayee.novel ? '+ ' : ''}{selectedPayee.label}
-							<button class="pill-x" onclick={clearPayee} aria-label="Remove payee">
-								<X size={12} strokeWidth={3} />
-							</button>
-						</span>
-					{:else}
-						<input
-							class="pill-text"
-							type="text"
-							placeholder="Search payee…"
-							value={payeeQuery}
-							oninput={(e) => { payeeQuery = (e.target as HTMLInputElement).value; showPayeeDropdown = true; }}
-							onfocus={() => { showPayeeDropdown = true; }}
-							onblur={() => setTimeout(() => showPayeeDropdown = false, 150)}
-							onkeydown={handlePayeeKey}
-							bind:this={payeeInput}
-						/>
+			{#if showPayeeDropdown && (filteredPayees.length > 0 || showCreateOption)}
+				<div class="source-dropdown">
+					{#each filteredPayees as payee (payee.id)}
+						<div
+							class="source-option"
+							role="button"
+							tabindex="0"
+							onmousedown={() => selectExistingPayee(payee)}
+							onkeydown={(e) => e.key === "Enter" && selectExistingPayee(payee)}
+						>
+							<span class="payee-label">{payee.label}</span>
+						</div>
+					{/each}
+					{#if showCreateOption}
+						<div
+							class="source-option source-option-novel"
+							role="button"
+							tabindex="0"
+							onmousedown={() => selectNovelPayee(payeeQuery.trim())}
+							onkeydown={(e) => e.key === "Enter" && selectNovelPayee(payeeQuery.trim())}
+						>
+							<span class="payee-label">+ Create "{payeeQuery.trim()}"</span>
+						</div>
 					{/if}
 				</div>
-				{#if showPayeeDropdown && (filteredPayees.length > 0 || showCreateOption)}
-					<div class="source-dropdown">
-						{#each filteredPayees as payee (payee.id)}
-							<div class="source-option" role="button" tabindex="0" onmousedown={() => selectExistingPayee(payee)} onkeydown={(e) => e.key === "Enter" && selectExistingPayee(payee)}>
-								<span class="payee-label">{payee.label}</span>
-							</div>
-						{/each}
-						{#if showCreateOption}
-							<div class="source-option source-option-novel" role="button" tabindex="0" onmousedown={() => selectNovelPayee(payeeQuery.trim())} onkeydown={(e) => e.key === "Enter" && selectNovelPayee(payeeQuery.trim())}>
-								<span class="payee-label">+ Create "{payeeQuery.trim()}"</span>
-							</div>
-						{/if}
-					</div>
-				{/if}
-			</div>
+			{/if}
+		</div>
 
-			<div class="modal-row date-row">
-				<input class="modal-input date-input" type="date" value={dateStr} oninput={(e) => dateStr = (e.target as HTMLInputElement).value} />
-			</div>
+		<div class="modal-row date-row">
+			<input
+				class="modal-input date-input"
+				type="date"
+				value={dateStr}
+				oninput={(e) => (dateStr = (e.target as HTMLInputElement).value)}
+			/>
+		</div>
 
-			<div class="modal-actions">
-				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={handleSubmit} disabled={busy || !selectedPayee}>{busy ? "Processing..." : "Done"}</button>
-			</div>
+		<div class="modal-actions">
+			<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
+			<button class="btn btn-primary" onclick={handleSubmit} disabled={busy || !selectedPayee}
+				>{busy ? "Processing..." : "Done"}</button
+			>
 		</div>
 	</div>
-{/if}
+</Dialog>
 
 <style>
-	.overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.6);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 300;
-		-webkit-backdrop-filter: blur(0.25rem);
-		backdrop-filter: blur(0.25rem);
-		padding: 1.5rem;
-	}
-
 	.modal {
 		background: var(--meta-dark);
 		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
@@ -285,11 +330,20 @@
 		transition: border-color 0.15s;
 	}
 
-	.modal-input:focus { border-color: var(--meta-accent); }
-	.modal-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+	.modal-input:focus {
+		border-color: var(--meta-accent);
+	}
+	.modal-input::placeholder {
+		color: rgba(255, 255, 255, 0.25);
+	}
 	.modal-input::-webkit-outer-spin-button,
-	.modal-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-	.modal-input[type="number"] { -moz-appearance: textfield; }
+	.modal-input::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+	.modal-input[type="number"] {
+		-moz-appearance: textfield;
+	}
 
 	.source-endpoint {
 		width: 100%;
@@ -309,7 +363,9 @@
 		transition: border-color 0.15s;
 	}
 
-	.source-combo:focus-within { border-color: var(--meta-accent); }
+	.source-combo:focus-within {
+		border-color: var(--meta-accent);
+	}
 
 	.source-combo-icon {
 		width: 1.75rem;
@@ -331,7 +387,9 @@
 		min-width: 0;
 	}
 
-	.source-combo-input::placeholder { color: rgba(255, 255, 255, 0.35); }
+	.source-combo-input::placeholder {
+		color: rgba(255, 255, 255, 0.35);
+	}
 
 	.source-combo-balance {
 		font-size: 0.6875rem;
@@ -367,8 +425,12 @@
 		outline: none;
 	}
 
-	.source-option:hover { background: rgba(255, 255, 255, 0.05); }
-	.source-option:focus-visible { outline: none; }
+	.source-option:hover {
+		background: rgba(255, 255, 255, 0.05);
+	}
+	.source-option:focus-visible {
+		outline: none;
+	}
 
 	.source-option-icon {
 		width: 1.75rem;
@@ -419,7 +481,9 @@
 		transition: border-color 0.15s;
 	}
 
-	.pills:focus-within { border-color: var(--meta-accent); }
+	.pills:focus-within {
+		border-color: var(--meta-accent);
+	}
 
 	.pill {
 		display: flex;
@@ -458,7 +522,9 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.pill-x:hover { background: rgba(255, 255, 255, 0.15); }
+	.pill-x:hover {
+		background: rgba(255, 255, 255, 0.15);
+	}
 
 	.pill-text {
 		flex: 1;
@@ -471,7 +537,9 @@
 		padding: 0.125rem 0;
 	}
 
-	.pill-text::placeholder { color: rgba(255, 255, 255, 0.25); }
+	.pill-text::placeholder {
+		color: rgba(255, 255, 255, 0.25);
+	}
 
 	.payee-label {
 		font-size: 0.875rem;
@@ -527,7 +595,9 @@
 		transition: opacity 0.15s;
 	}
 
-	.btn:active { opacity: 0.7; }
+	.btn:active {
+		opacity: 0.7;
+	}
 
 	.btn-primary {
 		color: var(--meta-darker);

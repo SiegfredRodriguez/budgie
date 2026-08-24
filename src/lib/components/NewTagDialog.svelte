@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Tag from "@lucide/svelte/icons/tag";
+	import Dialog from "./Dialog.svelte";
 
 	let {
 		show,
@@ -12,46 +13,23 @@
 		onclose: () => void;
 		ondone: () => void;
 	} = $props();
-
-	function handleOverlay(e: MouseEvent) {
-		if (e.target === e.currentTarget) onclose();
-	}
-
-	function handleKey(e: KeyboardEvent) {
-		if (e.key === "Escape") onclose();
-	}
 </script>
 
-{#if show}
-	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
-		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
-			<h2 class="modal-title">New Tag</h2>
-			<div class="preview">
-				<Tag size={24} strokeWidth={2} />
-				<span class="preview-value">{value}</span>
-			</div>
-			<div class="actions">
-				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={ondone}>Done</button>
-			</div>
+<Dialog {show} {onclose}>
+	<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+		<h2 class="modal-title">New Tag</h2>
+		<div class="preview">
+			<Tag size={24} strokeWidth={2} />
+			<span class="preview-value">{value}</span>
+		</div>
+		<div class="actions">
+			<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
+			<button class="btn btn-primary" onclick={ondone}>Done</button>
 		</div>
 	</div>
-{/if}
+</Dialog>
 
 <style>
-	.overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.6);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 300;
-		backdrop-filter: blur(0.25rem);
-		-webkit-backdrop-filter: blur(0.25rem);
-		padding: 1.5rem;
-	}
-
 	.modal {
 		background: var(--meta-dark);
 		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
@@ -103,7 +81,9 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.btn:active { opacity: 0.7; }
+	.btn:active {
+		opacity: 0.7;
+	}
 
 	.btn-primary {
 		background: var(--meta-accent);

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { formatBalance } from "$lib/format";
+	import Dialog from "./Dialog.svelte";
 
 	let {
 		show,
@@ -28,14 +29,6 @@
 		}
 	});
 
-	function handleOverlay(e: MouseEvent) {
-		if (e.target === e.currentTarget) onclose();
-	}
-
-	function handleKey(e: KeyboardEvent) {
-		if (e.key === "Escape") onclose();
-	}
-
 	async function handleDone() {
 		if (busy) return;
 		busy = true;
@@ -47,38 +40,43 @@
 	}
 </script>
 
-{#if show && target}
-	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
+<Dialog {show} {onclose}>
+	{#if target}
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
 			<div class="modal-header">
 				<div class="modal-header-main">{formatBalance(result, target.currency)}</div>
 				<div class="modal-header-sub">New Balance</div>
 			</div>
 			<div class="modal-row">
-				<input class="modal-input" type="number" inputmode="numeric" placeholder="Top Up Amount" value={amount} oninput={(e) => { const el = e.target as HTMLInputElement; let v = el.value; if (v.startsWith('-')) { v = v.replace('-', ''); el.value = v; } onamount(v); }} bind:this={amountInput} />
+				<input
+					class="modal-input"
+					type="number"
+					inputmode="numeric"
+					placeholder="Top Up Amount"
+					value={amount}
+					oninput={(e) => {
+						const el = e.target as HTMLInputElement;
+						let v = el.value;
+						if (v.startsWith("-")) {
+							v = v.replace("-", "");
+							el.value = v;
+						}
+						onamount(v);
+					}}
+					bind:this={amountInput}
+				/>
 			</div>
 			<div class="modal-actions">
 				<button class="btn btn-secondary" onclick={onclose}>Cancel</button>
-				<button class="btn btn-primary" onclick={handleDone} disabled={busy}>{busy ? "Processing..." : "Top Up"}</button>
+				<button class="btn btn-primary" onclick={handleDone} disabled={busy}
+					>{busy ? "Processing..." : "Top Up"}</button
+				>
 			</div>
 		</div>
-	</div>
-{/if}
+	{/if}
+</Dialog>
 
 <style>
-	.overlay {
-		position: fixed;
-		inset: 0;
-		background: rgba(0, 0, 0, 0.6);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 300;
-		-webkit-backdrop-filter: blur(0.25rem);
-		backdrop-filter: blur(0.25rem);
-		padding: 1.5rem;
-	}
-
 	.modal {
 		background: var(--meta-dark);
 		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
@@ -133,9 +131,13 @@
 		transition: border-color 0.15s;
 	}
 
-	.modal-input:focus { border-color: var(--meta-accent); }
+	.modal-input:focus {
+		border-color: var(--meta-accent);
+	}
 
-	.modal-input::placeholder { color: rgba(255, 255, 255, 0.25); }
+	.modal-input::placeholder {
+		color: rgba(255, 255, 255, 0.25);
+	}
 
 	.modal-actions {
 		display: flex;
@@ -160,7 +162,9 @@
 		transition: opacity 0.15s;
 	}
 
-	.btn:active { opacity: 0.7; }
+	.btn:active {
+		opacity: 0.7;
+	}
 
 	.btn-primary {
 		color: var(--meta-darker);
