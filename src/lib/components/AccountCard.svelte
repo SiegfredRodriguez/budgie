@@ -1,6 +1,7 @@
 <script lang="ts">
     import Icon from "./Icon.svelte";
     import { flags } from "$lib/stores/flags";
+    import { formatBalance } from "$lib/format";
     import Eye from "@lucide/svelte/icons/eye";
     import EyeClosed from "@lucide/svelte/icons/eye-closed";
 
@@ -28,13 +29,6 @@
 
     let censored = $state(true);
     let lpTimer: ReturnType<typeof setTimeout> | undefined;
-
-    function fmt(n: number, c: string): string {
-        const abs = Math.abs(n);
-        const p = abs.toFixed(2).split(".");
-        p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return `${c} ${n < 0 ? "-" : ""}${p[0]}.${p[1]}`;
-    }
 
     function startLongPress() {
         if (!$flags["transaction-history"] || !onlongpress) return;
@@ -66,7 +60,7 @@
     </div>
 
     <div class="card-balance-row">
-        <div class="card-balance">{censored ? "••••••" : fmt(balance, currency)}</div>
+        <div class="card-balance">{censored ? "••••••" : formatBalance(balance, currency)}</div>
         <button class="eye-btn" onclick={() => censored = !censored} aria-label={censored ? "Show balance" : "Hide balance"}>
             {#if censored}
                 <Eye size={16} />

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { formatBalance } from "$lib/format";
+
 	let {
 		show,
 		target,
@@ -14,13 +16,6 @@
 		ondone: () => void;
 		onamount: (v: string) => void;
 	} = $props();
-
-	function fmt(n: number, c: string): string {
-		const abs = Math.abs(n);
-		const p = abs.toFixed(2).split(".");
-		p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-		return `${c} ${n < 0 ? "-" : ""}${p[0]}.${p[1]}`;
-	}
 
 	let result = $derived(target ? target.balance + (parseFloat(amount) || 0) : 0);
 	let amountInput: HTMLInputElement;
@@ -56,7 +51,7 @@
 	<div class="overlay" onclick={handleOverlay} onkeydown={handleKey} role="presentation">
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
 			<div class="modal-header">
-				<div class="modal-header-main">{fmt(result, target.currency)}</div>
+				<div class="modal-header-main">{formatBalance(result, target.currency)}</div>
 				<div class="modal-header-sub">New Balance</div>
 			</div>
 			<div class="modal-row">

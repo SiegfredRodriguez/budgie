@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
+	import { formatBalance } from "$lib/format";
 
 	let {
 		show,
@@ -35,12 +36,6 @@
 	let searchInput: HTMLInputElement | undefined = $state();
 
 	let overBalance = $derived(!!source && parseFloat(amount) > source.balance);
-
-	function fmt(n: number, c: string): string {
-		const p = Math.abs(n).toFixed(2).split(".");
-		p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-		return `${c} ${p[0]}.${p[1]}`;
-	}
 
 	$effect(() => {
 		if (show) {
@@ -109,7 +104,7 @@
 						bind:this={searchInput}
 					/>
 					{#if selectedTarget && searchQuery === ""}
-						<span class="source-combo-balance">{fmt(selectedTarget.balance, selectedTarget.currency)}</span>
+						<span class="source-combo-balance">{formatBalance(selectedTarget.balance, selectedTarget.currency, "none")}</span>
 					{/if}
 				</div>
 				{#if showDropdown && filteredAccounts.length > 0}
@@ -119,7 +114,7 @@
 								<div class="source-option-icon"><Icon name={acct.icon} /></div>
 								<div class="source-option-text">
 									<span class="source-option-label">{acct.label}</span>
-									<span class="source-option-balance">{fmt(acct.balance, acct.currency)}</span>
+									<span class="source-option-balance">{formatBalance(acct.balance, acct.currency, "none")}</span>
 								</div>
 							</div>
 						{/each}

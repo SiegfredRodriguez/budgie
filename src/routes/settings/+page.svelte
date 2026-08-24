@@ -4,7 +4,7 @@
 	import { onMount } from "svelte";
 	import Fingerprint from "@lucide/svelte/icons/fingerprint";
 	import Trash2 from "@lucide/svelte/icons/trash-2";
-	import Snackbar from "$lib/components/Snackbar.svelte";
+	import { notifyError, notifySuccess } from "$lib/stores/snackbar";
 
 	let scrollTop = $state(0);
 	let headerHeight = $state(300);
@@ -17,10 +17,6 @@
 	let passkeys = $state<any[]>([]);
 	let passkeysLoading = $state(true);
 	let toggling = $state(false);
-
-	let snackbarMessage = $state("");
-	let snackbarType = $state<"error" | "success">("error");
-	let showSnackbar = $state(false);
 
 	let hasPasskey = $derived(passkeys.length > 0);
 
@@ -45,22 +41,15 @@
 					await supabase.auth.passkey.delete({ passkeyId: pk.id });
 				}
 				passkeys = [];
-				snackbarMessage = "Passkey removed";
-				snackbarType = "success";
-				showSnackbar = true;
+				notifySuccess("Passkey removed");
 			} else {
 				const { error } = await supabase.auth.registerPasskey();
 				if (error) throw error;
 				await loadPasskeys();
-				snackbarMessage = "Passkey registered";
-				snackbarType = "success";
-				showSnackbar = true;
+				notifySuccess("Passkey registered");
 			}
 		} catch (e: any) {
-			const msg = e?.message ?? "Failed to toggle passkey";
-			snackbarMessage = msg;
-			snackbarType = "error";
-			showSnackbar = true;
+			notifyError(e?.message ?? "Failed to toggle passkey");
 		} finally {
 			toggling = false;
 		}
@@ -70,14 +59,9 @@
 		try {
 			await supabase.auth.passkey.delete({ passkeyId: id });
 			passkeys = passkeys.filter((pk) => pk.id !== id);
-			snackbarMessage = "Passkey deleted";
-			snackbarType = "success";
-			showSnackbar = true;
+			notifySuccess("Passkey deleted");
 		} catch (e: any) {
-			const msg = e?.message ?? "Failed to delete passkey";
-			snackbarMessage = msg;
-			snackbarType = "error";
-			showSnackbar = true;
+			notifyError(e?.message ?? "Failed to delete passkey");
 		}
 	}
 
@@ -143,13 +127,6 @@
 		</div>
 	</div>
 </div>
-
-<Snackbar
-	message={snackbarMessage}
-	show={showSnackbar}
-	type={snackbarType}
-	ondismiss={() => showSnackbar = false}
-/>
 
 <style>
 	.scroller {

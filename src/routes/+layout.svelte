@@ -10,10 +10,12 @@
 	import { initPayees } from "$lib/stores/payees";
 	import { bootstrapReady } from "$lib/stores/init";
 	import { initLD } from "$lib/stores/flags";
+	import { snackbar, dismissSnackbar } from "$lib/stores/snackbar";
 	import { session, authReady, initAuth } from "$lib/stores/auth";
 	import { supabase } from "$lib/supabase";
 	import { dev } from "$app/environment";
 	import TabBar from "$lib/components/TabBar.svelte";
+	import Snackbar from "$lib/components/Snackbar.svelte";
 
 
 	let { children } = $props();
@@ -53,11 +55,21 @@
 	});
 
 	$effect(() => {
-		if ($session && splashStart > 0) {
-			const elapsed = Date.now() - splashStart;
-			const remaining = Math.max(0, 2000 - elapsed);
-			setTimeout(() => splashDone = true, remaining);
-		}
+		// LaunchDarkly needs to know who's asking before it can target
+		// per-user flags — wait for auth to settle rather than initializing
+		// anonymously and locking that in for the session.
+		if ($authReady) initLD($session?.user.id);
+	});
+
+	$effect(() => {
+		// Splash stays up for a minimum of 2s, but also until every domain
+		// store has actually finished loading (bootstrapReady resolves true
+		// immediately when there's no session to load data for).
+		if (!$session || !$bootstrapReady) return;
+		const elapsed = Date.now() - splashStart;
+		const remaining = Math.max(0, 2000 - elapsed);
+		const timer = setTimeout(() => (splashDone = true), remaining);
+		return () => clearTimeout(timer);
 	});
 
 	onNavigate((navigation) => {
@@ -79,7 +91,6 @@
 
 	onMount(() => {
 		initAuth();
-		initLD();
 		initAccounts();
 		initExpenses();
 		initTags();
@@ -117,6 +128,8 @@
 	<img src={favicon} alt="budgie" class="splash-logo" />
 	<span class="splash-name">budgie</span>
 </div>
+
+<Snackbar show={$snackbar.show} message={$snackbar.message} type={$snackbar.type} ondismiss={dismissSnackbar} />
 
 <style>
 	.content {

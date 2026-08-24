@@ -1,6 +1,8 @@
 import { writable } from 'svelte/store';
 import { supabase } from '$lib/supabase';
+import { notifyError } from './snackbar';
 import { expensesReady } from './init';
+import type { ExpenseDetailRow } from '$lib/types/db';
 
 export interface Expense {
 	id: string;
@@ -21,7 +23,7 @@ const initial: Expense[] = [];
 export const expenses = writable<Expense[]>(initial);
 export const expensesLoading = writable(false);
 
-function mapRow(t: any): Expense {
+function mapRow(t: ExpenseDetailRow): Expense {
 	return {
 		id: t.id,
 		amount: Math.abs(t.transaction.amount),
@@ -33,7 +35,7 @@ function mapRow(t: any): Expense {
 		payeeId: t.payee?.id ?? null,
 		payeeLabel: t.payee?.label ?? null,
 		payeeIcon: t.payee?.icon ?? null,
-		tags: (t.expense_tags ?? []).map((et: any) => et.tag).filter(Boolean),
+		tags: t.expense_tags.map((et) => et.tag).filter((tag): tag is Exclude<typeof tag, null> => tag !== null),
 	};
 }
 
@@ -45,8 +47,13 @@ export async function loadExpenses() {
 			.select('id, label, date, payee:payee_id(id, label, icon), expense_tags:expenses_tags!expense_id(tag:tag_id(id, value)), transaction:transaction_id!inner(amount, currency, account_id, created_at)')
 			.eq('transaction.type', 'EXPENSE');
 		if (error || !data) return;
+		// Cast rather than trust inference here: with no generated Database
+		// type, the client can't tell these embedded resources are one-to-one
+		// joins and infers them as arrays, which doesn't match the single
+		// objects Postgres actually returns for this query at runtime.
+		const rows = data as unknown as ExpenseDetailRow[];
 		expenses.set(
-			data.map(mapRow).sort((a, b) => {
+			rows.map(mapRow).sort((a, b) => {
 				const dateCmp = b.date.localeCompare(a.date);
 				if (dateCmp !== 0) return dateCmp;
 				return b.createdAt.localeCompare(a.createdAt);
@@ -66,6 +73,9 @@ export function subscribeExpenses() {
 		.on(
 			'postgres_changes',
 			{ event: '*', schema: 'public', table: 'transactions', filter: 'type=eq.EXPENSE' },
+			// Full refetch rather than patching the store in place, unlike the
+			// tags/payees stores: an Expense needs joined payee and tag data
+			// that a raw `transactions` realtime payload doesn't carry.
 			() => loadExpenses(),
 		)
 		.subscribe();
@@ -82,6 +92,7 @@ export async function initExpenses() {
 		await loadExpenses();
 	} catch (e) {
 		console.error('Failed to load expenses', e);
+		notifyError('Failed to load expenses');
 	}
 	expensesReady.set(true);
 }
