@@ -4,7 +4,7 @@
 	import Plus from "@lucide/svelte/icons/plus";
 	import NewTagDialog from "$lib/components/NewTagDialog.svelte";
 	import { tags, tagsLoading, createTag } from "$lib/stores/tags";
-	import { session } from "$lib/stores/auth";
+	import { notifyError } from "$lib/stores/snackbar";
 
 	let showNewTag = $state(false);
 	let query = $state("");
@@ -21,9 +21,10 @@
 
 	async function handleDone() {
 		try {
-			await createTag(query, $session!.user.id);
-		} catch (e) {
+			await createTag(query);
+		} catch (e: any) {
 			console.error("Failed to create tag", e);
+			notifyError(e?.message ?? "Failed to create tag");
 			return;
 		}
 		resetDialog();

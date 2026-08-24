@@ -1,9 +1,11 @@
 import { writable } from "svelte/store";
 import { supabase } from "$lib/supabase";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import { env } from "$env/dynamic/public";
+import { callFunction } from "$lib/api";
+import { notifyError } from "./snackbar";
 import { payeesReady } from "./init";
 import type { Tag } from "./tags";
+import type { PayeeRow } from "$lib/types/db";
 
 export interface Payee {
 	id: string;
@@ -17,11 +19,10 @@ const initial: Payee[] = [];
 export const payees = writable<Payee[]>(initial);
 export const payeesLoading = writable(false);
 
-function mapRow(r: any): Payee {
-	const tags = (r.payees_tags ?? [])
-		.map((pt: any) => pt.tags)
-		.filter(Boolean)
-		.map((t: any) => ({ id: t.id, value: t.value }));
+function mapRow(r: PayeeRow): Payee {
+	const tags: Tag[] = (r.payees_tags ?? [])
+		.map((pt) => pt.tags)
+		.filter((t): t is Tag => t !== null);
 	return { id: r.id, label: r.label, icon: r.icon ?? "", tags };
 }
 
@@ -48,13 +49,7 @@ function subscribePayees() {
 		.on(
 			"postgres_changes",
 			{ event: "*", schema: "public", table: "payees" },
-			(
-				payload: RealtimePostgresChangesPayload<{
-					id: string;
-					label: string;
-					icon: string;
-				}>,
-			) => {
+			(payload: RealtimePostgresChangesPayload<PayeeRow>) => {
 				if (payload.eventType === "INSERT") {
 					payees.update((current) => [...current, mapRow(payload.new)]);
 				} else if (payload.eventType === "UPDATE") {
@@ -84,36 +79,12 @@ export async function initPayees() {
 		await loadPayees();
 	} catch (e) {
 		console.error("Failed to load payees", e);
+		notifyError("Failed to load payees");
 	}
 	payeesReady.set(true);
 }
 
-function authHeaders() {
-	const key = env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-	return {
-		"Content-Type": "application/json",
-		apikey: key,
-		Authorization: `Bearer ${key}`,
-	};
-}
-
-export async function createPayee(
-	label: string,
-	icon: string,
-	tagIds: string[] = [],
-	userId: string,
-) {
-	const res = await fetch(
-		`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-payee`,
-		{
-			method: "POST",
-			headers: authHeaders(),
-			body: JSON.stringify({ label, icon, tagIds, user_id: userId }),
-		},
-	);
-	if (!res.ok) {
-		const err = await res.json();
-		throw new Error(err.error);
-	}
-	return mapRow(await res.json());
+export async function createPayee(label: string, icon: string, tagIds: string[] = []) {
+	const raw = await callFunction<PayeeRow>("create-payee", { label, icon, tagIds });
+	return mapRow(raw);
 }

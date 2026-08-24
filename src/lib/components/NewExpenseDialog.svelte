@@ -1,13 +1,14 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
 	import X from "@lucide/svelte/icons/x";
+	import { notifyError } from "$lib/stores/snackbar";
+	import { formatBalance } from "$lib/format";
 
 	let {
 		show,
 		accounts,
 		accountsLoading = false,
 		payees = [],
-		userId,
 		onclose,
 		onsubmit,
 	}: {
@@ -15,7 +16,6 @@
 		accounts: Array<{ id: string; icon: string; label: string; balance: number; currency: string }>;
 		accountsLoading?: boolean;
 		payees: Array<{ id: string; label: string; icon: string }>;
-		userId: string;
 		onclose: () => void;
 		onsubmit: (data: { account_id: string; amount: number; label: string; date: string; payee_id?: string; payee_label?: string }) => void;
 	} = $props();
@@ -50,12 +50,6 @@
 	let amountInput: HTMLInputElement | undefined = $state();
 	let searchInput: HTMLInputElement | undefined = $state();
 	let payeeInput: HTMLInputElement | undefined = $state();
-
-	function fmt(n: number, c: string): string {
-		const p = Math.abs(n).toFixed(2).split(".");
-		p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-		return `${c} ${p[0]}.${p[1]}`;
-	}
 
 	$effect(() => {
 		if (show) {
@@ -133,6 +127,8 @@
 					: { payee_id: selectedPayee.id }),
 			});
 			onclose();
+		} catch (e: any) {
+			notifyError(e?.message ?? "Failed to create expense");
 		} finally {
 			busy = false;
 		}
@@ -172,7 +168,7 @@
 						bind:this={searchInput}
 					/>
 					{#if selectedSource && searchQuery === ""}
-						<span class="source-combo-balance">{fmt(selectedSource.balance, selectedSource.currency)}</span>
+						<span class="source-combo-balance">{formatBalance(selectedSource.balance, selectedSource.currency, "none")}</span>
 					{/if}
 				</div>
 				{#if showSourceDropdown && filteredAccounts.length > 0}
@@ -182,7 +178,7 @@
 								<div class="source-option-icon"><Icon name={acct.icon} /></div>
 								<div class="source-option-text">
 									<span class="source-option-label">{acct.label}</span>
-									<span class="source-option-balance">{fmt(acct.balance, acct.currency)}</span>
+									<span class="source-option-balance">{formatBalance(acct.balance, acct.currency, "none")}</span>
 								</div>
 							</div>
 						{/each}

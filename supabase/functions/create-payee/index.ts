@@ -1,54 +1,33 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const corsHeaders = {
-	"Access-Control-Allow-Origin": "*",
-	"Access-Control-Allow-Methods": "POST, OPTIONS",
-	"Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { authenticate, corsHeaders, jsonResponse, serviceClient } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
 	if (req.method === "OPTIONS") {
 		return new Response(null, { status: 204, headers: corsHeaders });
 	}
 	if (req.method !== "POST") {
-		return new Response(JSON.stringify({ error: "Method not allowed" }), {
-			status: 405,
-			headers: { ...corsHeaders, "Content-Type": "application/json" },
-		});
+		return jsonResponse({ error: "Method not allowed" }, 405);
 	}
 
-	const { label, icon, tagIds, user_id } = await req.json();
+	const auth = await authenticate(req);
+	if (auth instanceof Response) return auth;
+	const { userId } = auth;
+
+	const { label, icon, tagIds } = await req.json();
 
 	if (!label || typeof label !== "string") {
-		return new Response(JSON.stringify({ error: "label is required" }), {
-			status: 400,
-			headers: { ...corsHeaders, "Content-Type": "application/json" },
-		});
+		return jsonResponse({ error: "label is required" }, 400);
 	}
 
-	if (!user_id || typeof user_id !== "string") {
-		return new Response(JSON.stringify({ error: "user_id is required" }), {
-			status: 400,
-			headers: { ...corsHeaders, "Content-Type": "application/json" },
-		});
-	}
-
-	const supabase = createClient(
-		Deno.env.get("SUPABASE_URL") ?? "",
-		Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-	);
+	const supabase = serviceClient();
 
 	const { data: payee, error: payeeError } = await supabase
 		.from("payees")
-		.insert({ label: label.trim(), icon: icon ?? "", user_id })
+		.insert({ label: label.trim(), icon: icon ?? "", user_id: userId })
 		.select()
 		.single();
 
 	if (payeeError) {
-		return new Response(JSON.stringify({ error: payeeError.message }), {
-			status: 500,
-			headers: { ...corsHeaders, "Content-Type": "application/json" },
-		});
+		return jsonResponse({ error: payeeError.message }, 500);
 	}
 
 	if (Array.isArray(tagIds) && tagIds.length > 0) {
@@ -57,20 +36,12 @@ Deno.serve(async (req) => {
 			tag_id,
 		}));
 
-		const { error: tagError } = await supabase
-			.from("payees_tags")
-			.insert(links);
+		const { error: tagError } = await supabase.from("payees_tags").insert(links);
 
 		if (tagError) {
-			return new Response(JSON.stringify({ error: tagError.message }), {
-				status: 500,
-				headers: { ...corsHeaders, "Content-Type": "application/json" },
-			});
+			return jsonResponse({ error: tagError.message }, 500);
 		}
 	}
 
-	return new Response(JSON.stringify(payee), {
-		status: 200,
-		headers: { ...corsHeaders, "Content-Type": "application/json" },
-	});
+	return jsonResponse(payee);
 });

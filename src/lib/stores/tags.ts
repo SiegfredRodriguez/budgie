@@ -1,8 +1,10 @@
 import { writable } from "svelte/store";
 import { supabase } from "$lib/supabase";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import { env } from "$env/dynamic/public";
+import { callFunction } from "$lib/api";
+import { notifyError } from "./snackbar";
 import { tagsReady } from "./init";
+import type { TagRow } from "$lib/types/db";
 
 export interface Tag {
 	id: string;
@@ -14,7 +16,7 @@ const initial: Tag[] = [];
 export const tags = writable<Tag[]>(initial);
 export const tagsLoading = writable(false);
 
-function mapRow(r: any): Tag {
+function mapRow(r: TagRow): Tag {
 	return { id: r.id, value: r.value };
 }
 
@@ -41,12 +43,7 @@ function subscribeTags() {
 		.on(
 			"postgres_changes",
 			{ event: "*", schema: "public", table: "tags" },
-			(
-				payload: RealtimePostgresChangesPayload<{
-					id: string;
-					value: string;
-				}>,
-			) => {
+			(payload: RealtimePostgresChangesPayload<TagRow>) => {
 				if (payload.eventType === "INSERT") {
 					tags.update((current) => [...current, mapRow(payload.new)]);
 				} else if (payload.eventType === "UPDATE") {
@@ -76,31 +73,12 @@ export async function initTags() {
 		await loadTags();
 	} catch (e) {
 		console.error("Failed to load tags", e);
+		notifyError("Failed to load tags");
 	}
 	tagsReady.set(true);
 }
 
-function authHeaders() {
-	const key = env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-	return {
-		"Content-Type": "application/json",
-		apikey: key,
-		Authorization: `Bearer ${key}`,
-	};
-}
-
-export async function createTag(value: string, userId: string) {
-	const res = await fetch(
-		`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-tag`,
-		{
-			method: "POST",
-			headers: authHeaders(),
-			body: JSON.stringify({ value, user_id: userId }),
-		},
-	);
-	if (!res.ok) {
-		const err = await res.json();
-		throw new Error(err.error);
-	}
-	return mapRow(await res.json());
+export async function createTag(value: string) {
+	const raw = await callFunction<TagRow>("create-tag", { value });
+	return mapRow(raw);
 }

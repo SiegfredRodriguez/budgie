@@ -1,7 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { accounts, topUpAccount, transferAccount, deleteAccount, addAccount } from "$lib/stores/accounts";
-    import { session } from "$lib/stores/auth";
+    import { accounts, accountsLoading, topUpAccount, transferAccount, deleteAccount, addAccount } from "$lib/stores/accounts";
+    import { notifyError } from "$lib/stores/snackbar";
+    import { formatBalance } from "$lib/format";
     import AccountCard from "$lib/components/AccountCard.svelte";
     import AccountTransactions from "$lib/components/AccountTransactions.svelte";
     import TopUpDialog from "$lib/components/TopUpDialog.svelte";
@@ -51,10 +52,11 @@
         if (amount <= 0) return;
         if (transferSource.balance < amount) return;
         try {
-            await transferAccount(transferSourceId, transferTargetId, amount, $session!.user.id);
+            await transferAccount(transferSourceId, transferTargetId, amount, transferSource.currency);
             showTransfer = false;
-        } catch (e) {
+        } catch (e: any) {
             console.error("Transfer failed", e);
+            notifyError(e?.message ?? "Transfer failed");
         }
     }
 
@@ -64,17 +66,15 @@
 
     async function handleCreate(data: { icon: string; name: string; initialValue: string }) {
         try {
-            await addAccount(
-                {
-                    icon: data.icon || "wallet",
-                    label: data.name || "Untitled Account",
-                    currency: "PHP",
-                    balance: parseFloat(data.initialValue) || 0,
-                },
-                $session!.user.id,
-            );
-        } catch (e) {
+            await addAccount({
+                icon: data.icon || "wallet",
+                label: data.name || "Untitled Account",
+                currency: "PHP",
+                balance: parseFloat(data.initialValue) || 0,
+            });
+        } catch (e: any) {
             console.error("Failed to create account", e);
+            notifyError(e?.message ?? "Failed to create account");
             return;
         }
         showModal = false;
@@ -96,10 +96,11 @@
         const amount = parseFloat(topUpAmount);
         if (amount <= 0) return;
         try {
-            await topUpAccount(topUpAccountId, amount, $session!.user.id);
+            await topUpAccount(topUpAccountId, amount, topUpTarget.currency);
             showTopUp = false;
-        } catch (e) {
+        } catch (e: any) {
             console.error("Top-up failed", e);
+            notifyError(e?.message ?? "Top-up failed");
         }
     }
 
@@ -107,16 +108,10 @@
         if (!confirm("Delete this account? All transactions will be lost.")) return;
         try {
             await deleteAccount(id);
-        } catch (e) {
+        } catch (e: any) {
             console.error("Failed to delete account", e);
+            notifyError(e?.message ?? "Failed to delete account");
         }
-    }
-
-    function formatBalance(amount: number, currency: string): string {
-        const abs = Math.abs(amount);
-        const parts = abs.toFixed(2).split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return `${currency} ${amount < 0 ? "-" : ""}${parts[0]}.${parts[1]}`;
     }
 
     function handleScroll() {
@@ -156,21 +151,27 @@
         </div>
     </div>
 
-    <div class="card-list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-        {#each $accounts as account}
-            <AccountCard
-                id={account.id}
-                icon={account.icon}
-                label={account.label}
-                balance={account.balance}
-                currency={account.currency}
-                ontopup={openTopUp}
-                ontransfer={openTransfer}
-                ondelete={handleDelete}
-                onlongpress={openTransactions}
-            />
-        {/each}
-    </div>
+    {#if $accountsLoading && $accounts.length === 0}
+        <div class="spinner-wrapper" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
+            <div class="spinner"></div>
+        </div>
+    {:else}
+        <div class="card-list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
+            {#each $accounts as account}
+                <AccountCard
+                    id={account.id}
+                    icon={account.icon}
+                    label={account.label}
+                    balance={account.balance}
+                    currency={account.currency}
+                    ontopup={openTopUp}
+                    ontransfer={openTransfer}
+                    ondelete={handleDelete}
+                    onlongpress={openTransactions}
+                />
+            {/each}
+        </div>
+    {/if}
 </div>
 
 <TopUpDialog
@@ -287,6 +288,28 @@
         padding-left: 1rem;
         padding-right: 1rem;
         padding-bottom: 6rem;
+    }
+
+    .spinner-wrapper {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-bottom: 6rem;
+    }
+
+    .spinner {
+        width: 2rem;
+        height: 2rem;
+        border: 0.1875rem solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--meta-accent);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 
     .pill-btn {
