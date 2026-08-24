@@ -8,6 +8,7 @@
 	import ExpenseItem from "$lib/components/ExpenseItem.svelte";
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
 	import OverflowMenu from "$lib/components/OverflowMenu.svelte";
+	import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
 	import { flags } from "$lib/stores/flags";
 	import Plus from "@lucide/svelte/icons/plus";
 
@@ -110,9 +111,7 @@
 	<ExpenseHero total={formatBalance(currentMonthExpenses, "PHP", "none")} count={currentMonthCount} {scrollTop} height={headerHeight} />
 
 	{#if $expensesLoading && $expenses.length === 0}
-		<div class="spinner-wrapper" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-			<div class="spinner"></div>
-		</div>
+		<LoadingSpinner style="position: relative; z-index: 2; padding-bottom: 6rem; margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px" />
 	{:else}
 		<div class="list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
 			{#each grouped() as group}
@@ -211,28 +210,6 @@
 		padding-left: 1rem;
 		padding-right: 1rem;
 		padding-bottom: 6rem;
-	}
-
-	.spinner-wrapper {
-		position: relative;
-		z-index: 2;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding-bottom: 6rem;
-	}
-
-	.spinner {
-		width: 2rem;
-		height: 2rem;
-		border: 0.1875rem solid rgba(255, 255, 255, 0.1);
-		border-top-color: var(--meta-accent);
-		border-radius: 50%;
-		animation: spin 0.6s linear infinite;
-	}
-
-	@keyframes spin {
-		to { transform: rotate(360deg); }
 	}
 
 	.date-header {

@@ -4,6 +4,7 @@
 	import Plus from "@lucide/svelte/icons/plus";
 	import NewPayeeDialog from "$lib/components/NewPayeeDialog.svelte";
 	import Icon from "$lib/components/Icon.svelte";
+	import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
 	import { payees, payeesLoading, createPayee } from "$lib/stores/payees";
 	import { notifyError } from "$lib/stores/snackbar";
 
@@ -51,9 +52,7 @@
 	</div>
 
 	{#if $payeesLoading && $payees.length === 0}
-		<div class="spinner-wrapper">
-			<div class="spinner"></div>
-		</div>
+		<LoadingSpinner style="padding: 4rem 1rem" />
 	{:else}
 		<div class="list">
 			{#each filtered as item (item.id)}
@@ -150,26 +149,6 @@
 
 	.search-input::placeholder {
 		color: rgba(255, 255, 255, 0.25);
-	}
-
-	.spinner-wrapper {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 4rem 1rem;
-	}
-
-	.spinner {
-		width: 2rem;
-		height: 2rem;
-		border: 0.1875rem solid rgba(255, 255, 255, 0.1);
-		border-top-color: var(--meta-accent);
-		border-radius: 50%;
-		animation: spin 0.6s linear infinite;
-	}
-
-	@keyframes spin {
-		to { transform: rotate(360deg); }
 	}
 
 	.list {
