@@ -5,7 +5,7 @@
 	import NewPayeeDialog from "$lib/components/NewPayeeDialog.svelte";
 	import Icon from "$lib/components/Icon.svelte";
 	import { payees, payeesLoading, createPayee } from "$lib/stores/payees";
-	import { session } from "$lib/stores/auth";
+	import { notifyError } from "$lib/stores/snackbar";
 
 	let showNewPayee = $state(false);
 	let query = $state("");
@@ -22,9 +22,10 @@
 
 	async function handleDone(data: { label: string; icon: string; tagIds: string[] }) {
 		try {
-			await createPayee(data.label, data.icon, data.tagIds, $session!.user.id);
-		} catch (e) {
+			await createPayee(data.label, data.icon, data.tagIds);
+		} catch (e: any) {
 			console.error("Failed to create payee", e);
+			notifyError(e?.message ?? "Failed to create payee");
 			return;
 		}
 		resetDialog();

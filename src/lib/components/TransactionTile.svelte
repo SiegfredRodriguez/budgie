@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { formatBalance } from "$lib/format";
+
     let {
         type,
         amount,
@@ -12,13 +14,6 @@
         description: string | null;
         date: string;
     } = $props();
-
-    function fmt(n: number, c: string): string {
-        const abs = Math.abs(n);
-        const p = abs.toFixed(2).split(".");
-        p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return `${c} ${n < 0 ? "-" : "+"}${p[0]}.${p[1]}`;
-    }
 
     let typeLabel = $derived(
         type === "EXPENSE"
@@ -68,7 +63,7 @@
             <span class="tile-desc">{description}</span>
         {/if}
     </div>
-    <span class="tile-amount {amount < 0 ? "tx-red" : "tx-teal"}">{fmt(amount, currency)}</span>
+    <span class="tile-amount {amount < 0 ? "tx-red" : "tx-teal"}">{formatBalance(amount, currency, "signed")}</span>
 </div>
 
 <style>

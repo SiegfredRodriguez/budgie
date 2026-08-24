@@ -1,64 +1,39 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { authenticate, corsHeaders, jsonResponse, serviceClient } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
+	if (req.method === "OPTIONS") {
+		return new Response(null, { status: 204, headers: corsHeaders });
+	}
+	if (req.method !== "POST") {
+		return jsonResponse({ error: "Method not allowed" }, 405);
+	}
 
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+	const auth = await authenticate(req);
+	if (auth instanceof Response) return auth;
+	const { userId } = auth;
 
-  const { name, icon, currency, balance, user_id } = await req.json();
+	const { name, icon, currency, balance } = await req.json();
 
-  if (!name || typeof name !== "string") {
-    return new Response(JSON.stringify({ error: "name is required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+	if (!name || typeof name !== "string") {
+		return jsonResponse({ error: "name is required" }, 400);
+	}
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-  );
+	const supabase = serviceClient();
 
-  if (!user_id || typeof user_id !== "string") {
-    return new Response(JSON.stringify({ error: "user_id is required" }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+	const { data: account, error: insertError } = await supabase.rpc(
+		"create_account_with_transaction",
+		{
+			p_name: name,
+			p_user_id: userId,
+			p_icon: icon || "bank",
+			p_currency: currency || "PHP",
+			p_balance: typeof balance === "number" ? balance : 0,
+		},
+	);
 
-  const { data: account, error: insertError } = await supabase.rpc(
-    "create_account_with_transaction",
-    {
-      p_name: name,
-      p_user_id: user_id,
-      p_icon: icon || "bank",
-      p_currency: currency || "PHP",
-      p_balance: typeof balance === "number" ? balance : 0,
-    },
-  );
+	if (insertError) {
+		return jsonResponse({ error: insertError.message }, 500);
+	}
 
-  if (insertError) {
-    return new Response(JSON.stringify({ error: insertError.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  return new Response(JSON.stringify(account), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+	return jsonResponse(account);
 });

@@ -1,0 +1,70 @@
+name: e2e
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    env:
+      # LaunchDarkly client-side IDs are meant to be public (they ship in
+      # every page's JS bundle already); the "fab" flag gates the main
+      # "new expense" button, so without this the app under test never
+      # renders it and every e2e test that needs it times out.
+      PUBLIC_LD_CLIENT_SIDE_ID: 6a492c91473ad80a90977934
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # `supabase start` applies every migration under supabase/migrations
+      # on boot, so the local stack comes up with an up-to-date schema.
+      - run: supabase start
+
+      # Every local `supabase start` mints its own keys — export them so the
+      # app under test and the auth setup step below can reach this instance.
+      - name: Export local Supabase env
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "PUBLIC_SUPABASE_URL=$API_URL"
+            echo "PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      # e2e/auth.setup.ts logs in as this user; a fresh CI stack has no
+      # users at all, so create it via the admin API before tests run.
+      - name: Seed e2e test user
+        run: |
+          curl -fsS -X POST "$PUBLIC_SUPABASE_URL/auth/v1/admin/users" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"dev@example.com","password":"password123","email_confirm":true}'
+
+      - run: supabase functions serve &
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run dev &
+      - run: npx wait-on http://localhost:5173
+
+      - run: npm run test:e2e:ci
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

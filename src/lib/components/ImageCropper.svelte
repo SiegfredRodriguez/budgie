@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { supabase } from "$lib/supabase";
+	import { notifyError } from "$lib/stores/snackbar";
 
 	let {
 		file,
@@ -173,6 +174,7 @@
 			uploading = false;
 			if (error) {
 				console.error(error);
+				notifyError("Failed to upload image");
 				return;
 			}
 			const { data } = supabase.storage.from("account-icons").getPublicUrl(path);

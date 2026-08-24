@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { accounts, accountsLoading } from "$lib/stores/accounts";
-	import { expenses, loadExpenses } from "$lib/stores/expenses";
+	import { expenses, expensesLoading, loadExpenses } from "$lib/stores/expenses";
 	import { payees, loadPayees } from "$lib/stores/payees";
-	import { session } from "$lib/stores/auth";
-	import { env } from '$env/dynamic/public';
+	import { callFunction } from "$lib/api";
+	import { formatBalance } from "$lib/format";
 	import ExpenseHero from "$lib/components/ExpenseHero.svelte";
 	import ExpenseItem from "$lib/components/ExpenseItem.svelte";
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
@@ -29,13 +29,6 @@
 			.reduce((sum, e) => sum + e.amount, 0),
 	);
 	let currentMonthCount = $derived($expenses.filter((e) => isCurrentMonth(e.date)).length);
-
-	function fmt(n: number, c = "PHP"): string {
-		const abs = Math.abs(n);
-		const p = abs.toFixed(2).split(".");
-		p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-		return `${c} ${p[0]}.${p[1]}`;
-	}
 
 	function toLocalDate(d: string): string {
 		const date = new Date(d + 'T00:00:00');
@@ -89,27 +82,14 @@
 	}
 
 	async function handleCreateExpense(data: { account_id: string; amount: number; label: string; date: string; payee_id?: string; payee_label?: string }) {
-		const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-expense`, {
-			method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'apikey': env.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-			'Authorization': `Bearer ${env.PUBLIC_SUPABASE_PUBLISHABLE_KEY}`,
-		},
-			body: JSON.stringify({
-				account_id: data.account_id,
-				amount: data.amount,
-				label: data.label,
-				date: data.date,
-				user_id: $session!.user.id,
-				payee_id: data.payee_id ?? null,
-				payee_label: data.payee_label ?? null,
-			}),
+		await callFunction('create-expense', {
+			account_id: data.account_id,
+			amount: data.amount,
+			label: data.label,
+			date: data.date,
+			payee_id: data.payee_id ?? null,
+			payee_label: data.payee_label ?? null,
 		});
-		if (!res.ok) {
-			const err = await res.json();
-			throw new Error(err.error);
-		}
 		closeDialog();
 		await Promise.all([loadExpenses(), loadPayees()]);
 	}
@@ -148,26 +128,32 @@
 {/if}
 
 <div class="scroller" onscroll={handleScroll} bind:this={scroller}>
-	<ExpenseHero total={fmt(currentMonthExpenses)} count={currentMonthCount} {scrollTop} height={headerHeight} />
+	<ExpenseHero total={formatBalance(currentMonthExpenses, "PHP", "none")} count={currentMonthCount} {scrollTop} height={headerHeight} />
 
-	<div class="list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-		{#each grouped() as group}
-			<div class="date-header">{group.label}</div>
-			{#each group.items as item}
-				<ExpenseItem
-					label={item.label}
-					formatted={fmt(item.amount, item.currency)}
-					current={isCurrentMonth(item.date)}
-					payeeLabel={item.payeeLabel}
-					payeeIcon={item.payeeIcon}
-					tags={item.tags}
-				/>
+	{#if $expensesLoading && $expenses.length === 0}
+		<div class="spinner-wrapper" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
+			<div class="spinner"></div>
+		</div>
+	{:else}
+		<div class="list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
+			{#each grouped() as group}
+				<div class="date-header">{group.label}</div>
+				{#each group.items as item}
+					<ExpenseItem
+						label={item.label}
+						formatted={formatBalance(item.amount, item.currency, "none")}
+						current={isCurrentMonth(item.date)}
+						payeeLabel={item.payeeLabel}
+						payeeIcon={item.payeeIcon}
+						tags={item.tags}
+					/>
+				{/each}
 			{/each}
-		{/each}
-	</div>
+		</div>
+	{/if}
 </div>
 
-<NewExpenseDialog show={showDialog} accounts={$accounts} accountsLoading={$accountsLoading} payees={$payees} userId={$session!.user.id} onclose={closeDialog} onsubmit={handleCreateExpense} />
+<NewExpenseDialog show={showDialog} accounts={$accounts} accountsLoading={$accountsLoading} payees={$payees} onclose={closeDialog} onsubmit={handleCreateExpense} />
 
 <style>
 	.pill-btn {
@@ -318,6 +304,28 @@
 		padding-left: 1rem;
 		padding-right: 1rem;
 		padding-bottom: 6rem;
+	}
+
+	.spinner-wrapper {
+		position: relative;
+		z-index: 2;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-bottom: 6rem;
+	}
+
+	.spinner {
+		width: 2rem;
+		height: 2rem;
+		border: 0.1875rem solid rgba(255, 255, 255, 0.1);
+		border-top-color: var(--meta-accent);
+		border-radius: 50%;
+		animation: spin 0.6s linear infinite;
+	}
+
+	@keyframes spin {
+		to { transform: rotate(360deg); }
 	}
 
 	.date-header {

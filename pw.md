@@ -14,6 +14,15 @@ npx playwright install       # re-download browsers
 
 Project already has `@playwright/test` in devDeps and `e2e/tab-bar.spec.ts`.
 
+## Current practice vs. this doc
+
+The specs under `e2e/` (`tab-bar.spec.ts`, `payees.spec.ts`, `expense-payee.spec.ts`)
+use inline `page.goto`/locator calls directly, not the Page Object Model / custom
+fixtures pattern shown further down — that section is kept as a reference for
+if/when the suite grows large enough to need it, not as the current convention.
+Run tests with `npm run test:e2e` (local) or `npm run test:e2e:ci` (matches
+`playwright.ci.config.ts`, used by `.github/workflows/e2e.yml`).
+
 ## Config (`playwright.config.ts`)
 
 ```ts

@@ -2,8 +2,8 @@
 	import Icon from "./Icon.svelte";
 	import ImageCropper from "./ImageCropper.svelte";
 	import TagsField from "./TagsField.svelte";
-	import { session } from "$lib/stores/auth";
 	import { createTag } from "$lib/stores/tags";
+	import { notifyError } from "$lib/stores/snackbar";
 
 	let {
 		show,
@@ -72,10 +72,12 @@
 		try {
 			const allTagIds = [...tagIds];
 			for (const value of stagedTags) {
-				const created = await createTag(value, $session!.user.id);
+				const created = await createTag(value);
 				allTagIds.push(created.id);
 			}
 			await onsubmit({ label: label.trim(), icon, tagIds: allTagIds });
+		} catch (e: any) {
+			notifyError(e?.message ?? "Failed to create payee");
 		} finally {
 			busy = false;
 		}

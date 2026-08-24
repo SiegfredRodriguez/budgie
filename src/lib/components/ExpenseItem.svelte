@@ -23,6 +23,7 @@
 		<div class="item-icon"><Icon name={payeeIcon} /></div>
 	{/if}
 	<div class="item-body">
+		<span class="label">{label}</span>
 		<span class="amount">{formatted}</span>
 		{#if payeeLabel}
 			<span class="payee">{payeeLabel}</span>
@@ -77,6 +78,15 @@
 		flex-direction: column;
 		justify-content: center;
 		gap: 0.125rem;
+	}
+
+	.label {
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: var(--meta-light);
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.amount {

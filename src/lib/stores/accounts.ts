@@ -1,8 +1,10 @@
 import { writable } from 'svelte/store';
 import { supabase } from '$lib/supabase';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { env } from '$env/dynamic/public';
+import { callFunction } from '$lib/api';
+import { notifyError } from './snackbar';
 import { accountsReady } from './init';
+import type { AccountRow } from '$lib/types/db';
 
 export interface Account {
 	id: string;
@@ -17,7 +19,7 @@ const initial: Account[] = [];
 export const accounts = writable<Account[]>(initial);
 export const accountsLoading = writable(false);
 
-function mapRow(r: any): Account {
+function mapRow(r: AccountRow): Account {
 	return { id: r.id, icon: r.icon, label: r.name, currency: r.currency, balance: r.balance };
 }
 
@@ -44,7 +46,7 @@ function subscribeAccounts() {
 		.on(
 			'postgres_changes',
 			{ event: '*', schema: 'public', table: 'accounts' },
-			(payload: RealtimePostgresChangesPayload<{ id: string; name: string; icon: string; currency: string; balance: number }>) => {
+			(payload: RealtimePostgresChangesPayload<AccountRow>) => {
 				if (payload.eventType === 'INSERT') {
 					accounts.update((current) => [...current, mapRow(payload.new)]);
 				} else if (payload.eventType === 'UPDATE') {
@@ -68,36 +70,18 @@ export async function initAccounts() {
 		await loadAccounts();
 	} catch (e) {
 		console.error('Failed to load accounts', e);
+		notifyError('Failed to load accounts');
 	}
 	accountsReady.set(true);
 }
 
-function authHeaders() {
-	const key = env.PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-	return {
-		'Content-Type': 'application/json',
-		'apikey': key,
-		'Authorization': `Bearer ${key}`,
-	};
-}
-
-export async function addAccount(account: Omit<Account, 'id'>, userId: string) {
-	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/create-account`, {
-		method: 'POST',
-		headers: authHeaders(),
-		body: JSON.stringify({
-			name: account.label,
-			icon: account.icon,
-			currency: account.currency,
-			balance: account.balance,
-			user_id: userId,
-		}),
+export async function addAccount(account: Omit<Account, 'id'>) {
+	const raw = await callFunction<AccountRow>('create-account', {
+		name: account.label,
+		icon: account.icon,
+		currency: account.currency,
+		balance: account.balance,
 	});
-	if (!res.ok) {
-		const err = await res.json();
-		throw new Error(err.error);
-	}
-	const raw = await res.json();
 	return mapRow(raw);
 }
 
@@ -106,37 +90,19 @@ export async function deleteAccount(id: string) {
 	if (error) throw new Error(error.message);
 }
 
-export async function topUpAccount(id: string, amount: number, userId: string) {
-	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/top-up-account`, {
-		method: 'POST',
-		headers: authHeaders(),
-		body: JSON.stringify({
-			account_id: id,
-			amount,
-			currency: 'PHP',
-			user_id: userId,
-		}),
+export async function topUpAccount(id: string, amount: number, currency: string) {
+	await callFunction('top-up-account', {
+		account_id: id,
+		amount,
+		currency,
 	});
-	if (!res.ok) {
-		const err = await res.json();
-		throw new Error(err.error);
-	}
 }
 
-export async function transferAccount(fromId: string, toId: string, amount: number, userId: string) {
-	const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/functions/v1/transfer-account`, {
-		method: 'POST',
-		headers: authHeaders(),
-		body: JSON.stringify({
-			from_id: fromId,
-			to_id: toId,
-			amount,
-			currency: 'PHP',
-			user_id: userId,
-		}),
+export async function transferAccount(fromId: string, toId: string, amount: number, currency: string) {
+	await callFunction('transfer-account', {
+		from_id: fromId,
+		to_id: toId,
+		amount,
+		currency,
 	});
-	if (!res.ok) {
-		const err = await res.json();
-		throw new Error(err.error);
-	}
 }

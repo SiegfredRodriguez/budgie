@@ -2,6 +2,8 @@
     import { onMount } from "svelte";
     import { fly } from "svelte/transition";
     import { supabase } from "$lib/supabase";
+    import { notifyError } from "$lib/stores/snackbar";
+    import { formatBalance } from "$lib/format";
     import Icon from "./Icon.svelte";
     import TransactionTile from "./TransactionTile.svelte";
     import ArrowLeft from "@lucide/svelte/icons/arrow-left";
@@ -72,13 +74,6 @@
         if (e.key === "Escape") onclose();
     }
 
-    function fmtBalance(n: number, c: string): string {
-        const abs = Math.abs(n);
-        const p = abs.toFixed(2).split(".");
-        p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return `${c} ${n < 0 ? "-" : ""}${p[0]}.${p[1]}`;
-    }
-
     onMount(async () => {
         try {
             const { data, error } = await supabase
@@ -88,6 +83,7 @@
                 .order("created_at", { ascending: false });
             if (error) {
                 console.error("Transactions query error", error);
+                notifyError("Failed to load transactions");
                 return;
             }
             if (data) {
@@ -113,7 +109,7 @@
             </button>
             <div class="header-icon"><Icon name={account.icon} /></div>
             <span class="header-name">{account.label}</span>
-            <span class="header-balance">{fmtBalance(account.balance, account.currency)}</span>
+            <span class="header-balance">{formatBalance(account.balance, account.currency)}</span>
         </div>
 
         <div class="panel-list">
