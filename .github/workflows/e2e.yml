@@ -1,0 +1,43 @@
+name: e2e
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # `supabase start` applies every migration under supabase/migrations
+      # on boot, so the local stack comes up with an up-to-date schema.
+      - run: supabase start
+
+      - run: supabase functions serve &
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run dev &
+      - run: npx wait-on http://localhost:5173
+
+      - run: npm run test:e2e:ci
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
