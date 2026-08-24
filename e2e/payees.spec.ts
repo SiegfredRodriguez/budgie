@@ -48,7 +48,7 @@ test.describe('Payees', () => {
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
 
-		await dialog.locator('input[type="text"]').fill('Starbucks');
+		await dialog.locator('.name-input').fill('Starbucks');
 		await dialog.getByRole('button', { name: 'Create Payee' }).click();
 
 		await expect(dialog).not.toBeVisible();
@@ -61,7 +61,7 @@ test.describe('Payees', () => {
 		const dialog = page.getByRole('dialog');
 		await expect(dialog).toBeVisible();
 
-		await dialog.locator('input[type="text"]').fill('Coffee Shop');
+		await dialog.locator('.name-input').fill('Coffee Shop');
 
 		const tagsInput = dialog.locator('input[placeholder*="tag" i]');
 		await tagsInput.fill('food');
@@ -76,13 +76,13 @@ test.describe('Payees', () => {
 	test('search filters payees', async ({ page }) => {
 		await page.getByText('Create New Payee').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[type="text"]').fill('Starbucks');
+		await dialog.locator('.name-input').fill('Starbucks');
 		await dialog.getByRole('button', { name: 'Create Payee' }).click();
 		await expect(page.getByText('Starbucks')).toBeVisible();
 
 		await page.getByText('Create New Payee').click();
 		const dialog2 = page.getByRole('dialog');
-		await dialog2.locator('input[type="text"]').fill('McDonalds');
+		await dialog2.locator('.name-input').fill('McDonalds');
 		await dialog2.getByRole('button', { name: 'Create Payee' }).click();
 		await expect(page.getByText('McDonalds')).toBeVisible();
 
@@ -94,7 +94,7 @@ test.describe('Payees', () => {
 	test('empty search shows all payees', async ({ page }) => {
 		await page.getByText('Create New Payee').click();
 		const dialog = page.getByRole('dialog');
-		await dialog.locator('input[type="text"]').fill('Test Payee');
+		await dialog.locator('.name-input').fill('Test Payee');
 		await dialog.getByRole('button', { name: 'Create Payee' }).click();
 		await expect(page.getByText('Test Payee')).toBeVisible();
 

@@ -1,16 +1,4 @@
-<script lang="ts">
-	let { name = "wallet" }: { name: string } = $props();
-
-	let src = $state("");
-
-	$effect(() => {
-		if (name.startsWith("http")) {
-			iconCache.load(name).then((url) => src = url);
-		}
-	});
-</script>
-
-<script context="module" lang="ts">
+<script module lang="ts">
 	const blobCache = new Map<string, string>();
 
 	const iconCache = {
@@ -28,6 +16,18 @@
 			}
 		},
 	};
+</script>
+
+<script lang="ts">
+	let { name = "wallet" }: { name: string } = $props();
+
+	let src = $state("");
+
+	$effect(() => {
+		if (name.startsWith("http")) {
+			iconCache.load(name).then((url) => src = url);
+		}
+	});
 </script>
 
 {#if name.startsWith("http")}

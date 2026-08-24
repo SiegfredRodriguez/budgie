@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ImageCropper from "./ImageCropper.svelte";
 	import { supabase } from "$lib/supabase";
-	import { PUBLIC_SUPABASE_URL } from "$env/static/public";
+	import { env } from "$env/dynamic/public";
 
 	let {
 		value = "",
@@ -22,7 +22,7 @@
 			if (error || !data) return;
 			uploadedIcons = data
 				.filter((f) => f.id) // skip folders
-				.map((f) => `${PUBLIC_SUPABASE_URL}/storage/v1/object/public/account-icons/${f.name}`);
+				.map((f) => `${env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/account-icons/${f.name}`);
 		});
 	});
 

@@ -28,3 +28,4 @@ dev-dist/
 
 # Playwright
 playwright/.auth/
+playwright-report/
