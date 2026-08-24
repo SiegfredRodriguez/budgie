@@ -3,6 +3,7 @@
 	import ImageCropper from "./ImageCropper.svelte";
 	import TagsField from "./TagsField.svelte";
 	import { createTag } from "$lib/stores/tags";
+	import { notifyError } from "$lib/stores/snackbar";
 
 	let {
 		show,
@@ -75,6 +76,8 @@
 				allTagIds.push(created.id);
 			}
 			await onsubmit({ label: label.trim(), icon, tagIds: allTagIds });
+		} catch (e: any) {
+			notifyError(e?.message ?? "Failed to create payee");
 		} finally {
 			busy = false;
 		}
