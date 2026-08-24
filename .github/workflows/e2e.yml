@@ -8,6 +8,12 @@ on:
 jobs:
   playwright:
     runs-on: ubuntu-latest
+    env:
+      # LaunchDarkly client-side IDs are meant to be public (they ship in
+      # every page's JS bundle already); the "fab" flag gates the main
+      # "new expense" button, so without this the app under test never
+      # renders it and every e2e test that needs it times out.
+      PUBLIC_LD_CLIENT_SIDE_ID: 6a492c91473ad80a90977934
     steps:
       - uses: actions/checkout@v4
 
