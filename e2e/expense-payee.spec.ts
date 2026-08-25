@@ -215,6 +215,11 @@ test.describe('Expense payee field', () => {
 	});
 
 	test('full flow with existing payee', async ({ page }) => {
+		// This test does meaningfully more setup than its siblings (fillBaseFields
+		// plus two combobox interactions), which occasionally runs past the
+		// default 5s test timeout under CI's slower/more variable page-load
+		// timing — confirmed via trace inspection, not a real app hang.
+		test.setTimeout(10_000);
 		await openDialog(page);
 		await fillBaseFields(page);
 		const dialog = page.getByRole('dialog');
@@ -227,6 +232,9 @@ test.describe('Expense payee field', () => {
 	});
 
 	test('full flow with novel payee', async ({ page }) => {
+		// Same rationale as "full flow with existing payee" above, plus an
+		// extra /payees navigation — needs more than the default 5s budget.
+		test.setTimeout(10_000);
 		await openDialog(page);
 		await fillBaseFields(page);
 		const dialog = page.getByRole('dialog');
