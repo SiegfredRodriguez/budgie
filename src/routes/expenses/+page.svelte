@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { accounts, accountsLoading } from "$lib/stores/accounts";
 	import { expenses, expensesLoading, loadExpenses } from "$lib/stores/expenses";
-	import { payees, loadPayees } from "$lib/stores/payees";
+	import { observePayees, pullPayees } from "$lib/local/payees";
+	import { session } from "$lib/stores/auth";
 	import { callFunction } from "$lib/api";
 	import { formatBalance } from "$lib/format";
+
+	const payees = observePayees();
 	import ExpenseHero from "$lib/components/ExpenseHero.svelte";
 	import ExpenseItem from "$lib/components/ExpenseItem.svelte";
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
@@ -88,7 +91,7 @@
 			payee_label: data.payee_label ?? null,
 		});
 		closeDialog();
-		await Promise.all([loadExpenses(), loadPayees()]);
+		await Promise.all([loadExpenses(), pullPayees($session!.user.id)]);
 	}
 </script>
 

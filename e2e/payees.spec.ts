@@ -11,7 +11,7 @@ let userId: string;
 // (see payees/+page.svelte), so every test in this file needs the list
 // actually empty when it starts — not just eventually cleaned up once at
 // the end. Run this after each test, not only after all of them.
-async function cleanupE2ePayeesAndTags(request: APIRequestContext) {
+async function cleanupE2ePayeesAndTagsOnce(request: APIRequestContext) {
 	const h = { apikey: KEY, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
 	const payRes = await request.get(`${SUPABASE_URL}/rest/v1/payees?label=like.*E2E*&select=id`, { headers: h });
 	if (payRes.ok()) {
@@ -33,6 +33,20 @@ async function cleanupE2ePayeesAndTags(request: APIRequestContext) {
 			await request.patch(`${SUPABASE_URL}/rest/v1/tags?id=eq.${t.id}`, { headers: tagH, data: { is_deleted: true } });
 		}
 	}
+}
+
+// Payees/tags created through the UI now write to IndexedDB first and sync
+// to the server in the background (fire-and-forget) — a test's assertions
+// pass as soon as the local write lands, well before that push necessarily
+// has. A single cleanup pass right after can query the server too early,
+// find nothing, and then the delayed push lands afterward with nothing
+// left to remove it — leaking into the next test. Run the pass twice with
+// a short gap so a push that was still in flight gets caught the second
+// time around.
+async function cleanupE2ePayeesAndTags(request: APIRequestContext) {
+	await cleanupE2ePayeesAndTagsOnce(request);
+	await new Promise((r) => setTimeout(r, 500));
+	await cleanupE2ePayeesAndTagsOnce(request);
 }
 
 test.beforeAll(async ({ request }) => {
@@ -131,20 +145,22 @@ test.describe('Payees', () => {
 	test('payee tile shows tag pills', async ({ page, request }) => {
 		const h = { apikey: KEY, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' };
 
+		// Run-unique value: a fixed literal here can collide with a tag from a
+		// prior run that the afterEach cleanup soft-deleted (tags can never be
+		// hard-deleted). The old code fell back to looking that row up by
+		// value while ignoring `is_deleted`, silently linking the payee to a
+		// tombstoned tag — which the app then correctly hides from the tile,
+		// making this assertion fail for reasons that have nothing to do with
+		// the app itself. A unique value every run avoids ever hitting that
+		// fallback path.
+		const tagValue = `E2E Tag Pill Tag ${Date.now()}`;
+
 		const tagRes = await request.post(`${SUPABASE_URL}/rest/v1/tags`, {
 			headers: h,
-			data: { value: 'E2E Tag Pill Tag' },
+			data: { value: tagValue },
 		});
-		let tagId: string;
-		if (tagRes.ok()) {
-			const arr = await tagRes.json();
-			tagId = arr[0]?.id;
-		} else {
-			const existing = await request.get(`${SUPABASE_URL}/rest/v1/tags?value=eq.E2E Tag Pill Tag&select=id`, {
-				headers: { apikey: KEY, Authorization: `Bearer ${accessToken}` },
-			});
-			tagId = (await existing.json())[0]?.id;
-		}
+		expect(tagRes.ok()).toBeTruthy();
+		const tagId = (await tagRes.json())[0]?.id;
 
 		const payeeRes = await request.post(`${SUPABASE_URL}/functions/v1/create-payee`, {
 			headers: { apikey: KEY, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -154,6 +170,6 @@ test.describe('Payees', () => {
 
 		await page.goto('/payees');
 		await expect(page.getByText('E2E Tagged Payee Tile')).toBeVisible();
-		await expect(page.locator('.tag-pill').filter({ hasText: 'E2E Tag Pill Tag' })).toBeVisible();
+		await expect(page.locator('.tag-pill').filter({ hasText: tagValue })).toBeVisible();
 	});
 });

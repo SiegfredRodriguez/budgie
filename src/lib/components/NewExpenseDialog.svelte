@@ -2,6 +2,7 @@
 	import Dialog from "./Dialog.svelte";
 	import AccountCombobox from "./AccountCombobox.svelte";
 	import PayeeCombobox from "./PayeeCombobox.svelte";
+	import { ensurePayeeSynced } from "$lib/local/payees";
 	import { notifyError } from "$lib/stores/snackbar";
 
 	let {
@@ -67,6 +68,13 @@
 		if (!amount || !label || !sourceId || !dateStr || !selectedPayee) return;
 		busy = true;
 		try {
+			// create-expense is still server-authoritative and payee_id has a
+			// foreign key on it, so an optimistically-created (not yet synced)
+			// payee needs to actually exist server-side before this fires —
+			// same reasoning as ensureTagSynced in NewPayeeDialog.
+			if (!selectedPayee.novel && selectedPayee.id) {
+				await ensurePayeeSynced(selectedPayee.id);
+			}
 			await onsubmit({
 				account_id: sourceId,
 				amount: parseFloat(amount),
