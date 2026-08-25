@@ -28,6 +28,8 @@
         currency: string;
         description: string | null;
         created_at: string;
+        pending: boolean;
+        error?: string;
     }
 
     // The panel is opened for one specific account and never re-targeted at
@@ -106,6 +108,8 @@
                             currency={tx.currency}
                             description={tx.description}
                             date={tx.created_at}
+                            pending={tx.pending}
+                            error={tx.error}
                         />
                     {/each}
                 {/each}

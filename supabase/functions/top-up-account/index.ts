@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 	if (auth instanceof Response) return auth;
 	const { userId } = auth;
 
-	const { account_id, amount, currency, description } = await req.json();
+	const { account_id, amount, currency, description, transaction_id } = await req.json();
 
 	if (!account_id || typeof account_id !== "string") {
 		return jsonResponse({ error: "account_id is required" }, 400);
@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
 		p_user_id: userId,
 		p_currency: currency || "PHP",
 		p_description: description || null,
+		p_transaction_id: transaction_id || undefined,
 	});
 
 	if (rpcError) {

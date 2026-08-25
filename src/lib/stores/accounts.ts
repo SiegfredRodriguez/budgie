@@ -9,6 +9,7 @@ import {
 	transferAccount as transferAccountLocal,
 	pullAccounts,
 } from "$lib/local/accounts";
+import { processPendingLedgerOps } from "$lib/local/ledger";
 import { scheduleReconciliation } from "$lib/local/sync";
 import { notifyError } from "./snackbar";
 import { accountsReady } from "./init";
@@ -98,6 +99,7 @@ function subscribeAccounts() {
 				const row = payload.new;
 				db.transactions.put({
 					id: row.id,
+					operation_id: row.id,
 					account_id: row.account_id,
 					type: row.type,
 					amount: row.amount,
@@ -133,14 +135,21 @@ export async function initAccounts() {
 	accountsLoading.set(true);
 	try {
 		await pullAccounts(currentUserId);
+		await processPendingLedgerOps();
 	} catch (e) {
 		console.error("Failed to load accounts", e);
 		notifyError("Failed to load accounts");
 	} finally {
 		accountsLoading.set(false);
 	}
-	stopReconciliation = scheduleReconciliation(() => {
-		if (currentUserId) pullAccounts(currentUserId).catch((e) => console.error("Account reconciliation failed", e));
+	stopReconciliation = scheduleReconciliation(async () => {
+		if (!currentUserId) return;
+		try {
+			await pullAccounts(currentUserId);
+			await processPendingLedgerOps();
+		} catch (e) {
+			console.error("Account reconciliation failed", e);
+		}
 	});
 	accountsReady.set(true);
 }

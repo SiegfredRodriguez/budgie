@@ -49,15 +49,19 @@ export interface LocalAccount {
 	_synced: 0 | 1;
 }
 
-/** Money-moving transactions (TOP_UP/TRANSFER) are never retried
- * automatically like tags/payees/account-creation are — calling the RPC
- * twice really moves money twice, so there's no safe generic "retry
- * unsynced rows" path for them. `_synced: 0` here instead means "an
- * optimistic prediction of a transaction whose real outcome (success,
- * failure, or genuinely unknown because the tab closed mid-request) hasn't
- * been confirmed yet" — `local/accounts.ts` reconciles or discards these
- * explicitly rather than blindly re-pushing them. No `is_deleted`: nothing
- * ever deletes a transaction. */
+/** Money-moving transactions (TOP_UP/TRANSFER/EXPENSE) are idempotent —
+ * see 00047_ledger_idempotent_retry.sql — so, unlike an earlier version of
+ * this comment claimed, they *are* safe to queue offline and retry: the
+ * RPC accepts this row's own `id` as the transaction id, and returns the
+ * already-applied outcome instead of re-running the balance change if it's
+ * called twice for the same id. `_synced: 0` means "written locally, not
+ * yet confirmed" — `local/ledger.ts` retries these in `created_at` order
+ * (the action-timestamp the operation was actually performed at) whenever
+ * the app is online. `_error` is set only once the server has definitively
+ * rejected the operation (e.g. insufficient balance) — a terminal state,
+ * never retried again, surfaced to the user rather than silently dropped
+ * or endlessly reattempted. No `is_deleted`: nothing ever deletes a
+ * transaction. */
 export interface LocalTransaction {
 	id: string;
 	account_id: string;
@@ -68,13 +72,14 @@ export interface LocalTransaction {
 	created_at: string;
 	last_modified: string;
 	_synced: 0 | 1;
+	/** Groups the rows belonging to one logical operation for retry
+	 * purposes: equal to `id` for a TOP_UP or an EXPENSE's transaction row,
+	 * shared between both legs of a TRANSFER, and shared with the paired
+	 * LocalExpenseDetail row for an EXPENSE. */
+	operation_id: string;
+	_error?: string;
 }
 
-/** Expenses are the same "predict, await the real (server-authoritative,
- * non-retriable) call, reconcile or roll back" shape as TOP_UP/TRANSFER
- * transactions, for the same reason — create-expense both moves money and
- * can insert a brand-new payee atomically, so it can't be safely retried
- * blind. No `is_deleted`: no delete-expense feature exists. */
 export interface LocalExpenseDetail {
 	id: string;
 	user_id: string;
@@ -90,6 +95,9 @@ export interface LocalExpenseDetail {
 	novel_payee_label?: string;
 	last_modified: string;
 	_synced: 0 | 1;
+	/** Mirrors the paired LocalTransaction's `_error`, set at the same
+	 * time, so the UI can show a failed expense without a second lookup. */
+	_error?: string;
 }
 
 /** Junction row for the expense↔tag many-to-many, copied atomically from
@@ -130,6 +138,10 @@ db.version(3).stores({
 db.version(4).stores({
 	expenseDetails: "id, user_id, date, transaction_id, payee_id, last_modified, _synced",
 	expensesTags: "[expense_id+tag_id], expense_id, tag_id, last_modified, _synced",
+});
+
+db.version(5).stores({
+	transactions: "id, account_id, operation_id, created_at, last_modified, _synced",
 });
 
 export { db };

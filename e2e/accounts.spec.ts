@@ -161,13 +161,16 @@ test.describe('Accounts', () => {
 		}).toPass({ timeout: 10_000 });
 	});
 
-	test('offline top-up fails and rolls back instead of silently queueing', async ({ page, request, context }) => {
-		// Unlike account creation (idempotent, safe to retry), a top-up
-		// really moves money — see LocalTransaction's doc comment in db.ts.
-		// It must not queue itself for a later retry; it should fail
-		// immediately and restore the pre-top-up balance.
+	test('offline top-up queues instantly and syncs once reconnected', async ({ page, request, context }) => {
+		// The ledger RPCs are idempotent on the client-generated transaction
+		// id (00047_ledger_idempotent_retry.sql), so — unlike the old design
+		// — a top-up is safe to queue offline and retry: it predicts the
+		// balance instantly, the dialog closes as though it worked, and the
+		// server catches up once local/ledger.ts's reconciliation retries it
+		// on reconnect.
+		test.setTimeout(15_000);
 		const name = v('Offline TopUp Target');
-		await createAccount(request, name, 1000);
+		const accountId = await createAccount(request, name, 1000);
 		await page.goto('/accounts');
 
 		const card = cardFor(page, name);
@@ -181,12 +184,61 @@ test.describe('Accounts', () => {
 		await dialog.locator('.modal-input').fill('250');
 		await dialog.getByRole('button', { name: 'Top Up' }).click();
 
-		// handleTopUpDone only closes the dialog on success, so it stays open
-		// here — the error surfaces via the snackbar instead.
-		await expect(page.locator('.snackbar.error')).toBeVisible();
-		await dialog.getByRole('button', { name: 'Cancel' }).click();
-		await expect(card.locator('.card-balance')).toHaveText('PHP 1,000.00');
+		await expect(dialog).not.toBeVisible();
+		await expect(card.locator('.card-balance')).toHaveText('PHP 1,250.00');
+
+		const h = { apikey: KEY, Authorization: `Bearer ${accessToken}` };
+		const whileOffline = await request.get(`${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}&select=balance`, { headers: h });
+		expect((await whileOffline.json())[0].balance).toBe(1000);
 
 		await context.setOffline(false);
+		await expect(async () => {
+			const res = await request.get(`${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}&select=balance`, { headers: h });
+			expect((await res.json())[0].balance).toBe(1250);
+		}).toPass({ timeout: 10_000 });
+	});
+
+	test('a queued transfer the server rejects on sync is marked failed, not retried forever', async ({ page, request, context }) => {
+		// Simulates a real conflict: another device (a direct API call here
+		// via the `request` fixture, which — unlike the page — isn't
+		// affected by context.setOffline, standing in for a second device)
+		// spends from the same account while this one is offline, so the
+		// locally-queued transfer — valid when the user made it against a
+		// balance of 500 — is genuinely invalid (only 200 left) by the time
+		// it's finally pushed on reconnect.
+		test.setTimeout(20_000);
+		const name = v('Conflict Transfer Source');
+		const sinkName = v('Conflict Transfer Sink');
+		const accountId = await createAccount(request, name, 500);
+		const sinkId = await createAccount(request, sinkName, 0);
+		await page.goto('/accounts');
+
+		const card = cardFor(page, name);
+		await expect(card).toBeVisible();
+
+		await context.setOffline(true);
+		await card.getByRole('button', { name: 'Transfer' }).click();
+		const dialog = page.getByRole('dialog');
+		await dialog.locator('.source-combo-input').fill(sinkName);
+		const sinkOption = dialog.locator('.source-option').filter({ hasText: sinkName });
+		await expect(sinkOption).toBeVisible();
+		await sinkOption.click();
+		await expect(dialog.locator('.source-combo-balance')).toBeVisible();
+		await dialog.locator('.modal-input').fill('400'); // fine against the local 500, not against the 200 left after the conflict below
+		await dialog.getByRole('button', { name: 'Transfer' }).click();
+		await expect(dialog).not.toBeVisible();
+
+		const h = { apikey: KEY, Authorization: `Bearer ${accessToken}` };
+		const conflictRes = await request.post(`${SUPABASE_URL}/functions/v1/transfer-account`, {
+			headers: h,
+			data: { from_id: accountId, to_id: sinkId, amount: 300, currency: 'PHP' },
+		});
+		expect(conflictRes.ok()).toBeTruthy();
+
+		await context.setOffline(false);
+		await expect(page.locator('.snackbar.error')).toBeVisible({ timeout: 10_000 });
+
+		const res = await request.get(`${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}&select=balance`, { headers: h });
+		expect((await res.json())[0].balance).toBe(200);
 	});
 });

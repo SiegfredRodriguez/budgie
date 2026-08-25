@@ -128,6 +128,8 @@
 						payeeLabel={item.payeeLabel}
 						payeeIcon={item.payeeIcon}
 						tags={item.tags}
+						pending={item.pending}
+						error={item.error}
 					/>
 				{/each}
 			{/each}

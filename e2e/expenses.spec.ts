@@ -11,12 +11,12 @@ let accessToken: string;
 // covers what that one doesn't: that a created expense actually shows up
 // with the right amount in the /expenses list and debits the account
 // balance, and that — like accounts.spec.ts's top-up/transfer — an offline
-// attempt fails and rolls back rather than silently queueing, since
-// create-expense both moves money and can create a payee atomically.
+// attempt queues instantly and syncs on reconnect rather than failing
+// outright, since create-expense is idempotent on its own transaction id
+// (00047_ledger_idempotent_retry.sql).
 const RUN = Date.now().toString(36);
 const v = (name: string) => `E2E ${name} ${RUN}`;
 
-let accountId: string;
 const accountName = v('Expenses Account');
 
 async function createAccount(request: APIRequestContext, name: string, balance: number) {
@@ -35,7 +35,7 @@ test.beforeAll(async ({ request }) => {
 	});
 	expect(authRes.ok()).toBeTruthy();
 	accessToken = (await authRes.json()).access_token;
-	accountId = await createAccount(request, accountName, 2000);
+	await createAccount(request, accountName, 2000);
 });
 
 test.afterAll(async ({ request }) => {
@@ -98,9 +98,10 @@ test.describe('Expenses', () => {
 		await expect(card.locator('.card-balance')).toHaveText('PHP 1,750.00');
 	});
 
-	test('offline expense creation fails and rolls back instead of silently queueing', async ({ page, context }) => {
-		test.setTimeout(15_000);
+	test('offline expense creation queues instantly and syncs once reconnected', async ({ page, request, context }) => {
+		test.setTimeout(20_000);
 		const label = v('Offline Expense');
+		const payeeLabel = v('Offline Payee');
 
 		await page.goto('/expenses');
 		await page.locator('.splash-overlay.done').waitFor({ state: 'attached', timeout: 15_000 });
@@ -116,22 +117,31 @@ test.describe('Expenses', () => {
 		const accountOption = dialog.locator('.source-endpoint .source-option').filter({ hasText: accountName });
 		await expect(accountOption).toBeVisible();
 		await accountOption.click();
-		const balanceBeforeText = await dialog.locator('.source-endpoint .source-combo-balance').textContent();
+		await expect(dialog.locator('.source-endpoint .source-combo-balance')).toBeVisible();
 
-		await dialog.locator('.payee-endpoint .pill-text').fill(v('Offline Payee'));
+		await dialog.locator('.payee-endpoint .pill-text').fill(payeeLabel);
 		await dialog.locator('.payee-endpoint .source-option-novel').click();
 
 		await dialog.getByRole('button', { name: 'Done' }).click();
 
-		// create-expense is server-authoritative and offline means the call
-		// fails outright — no queued retry (same reasoning as accounts.ts's
-		// top-up/transfer). The dialog stays open on failure, same as
-		// TopUpDialog/TransferDialog.
-		await expect(page.locator('.snackbar.error')).toBeVisible();
-		await expect(dialog).toBeVisible();
-		await expect(dialog.locator('.source-endpoint .source-combo-balance')).toHaveText(balanceBeforeText ?? '');
-		await expect(page.locator('.item').filter({ hasText: label })).not.toBeVisible();
+		// The dialog closes as though it worked — create-expense is
+		// idempotent on its own transaction id, so it's safe to queue and
+		// retry rather than fail outright the way a genuinely non-retriable
+		// operation would.
+		await expect(dialog).not.toBeVisible();
+		const item = page.locator('.item').filter({ hasText: label });
+		await expect(item).toBeVisible();
+		await expect(item.locator('.status-pending')).toBeVisible();
+
+		const h = { apikey: KEY, Authorization: `Bearer ${accessToken}` };
+		const whileOffline = await request.get(`${SUPABASE_URL}/rest/v1/expense_details?label=eq.${encodeURIComponent(label)}&select=id`, { headers: h });
+		expect((await whileOffline.json()).length).toBe(0);
 
 		await context.setOffline(false);
+		await expect(item.locator('.status-pending')).not.toBeVisible({ timeout: 10_000 });
+		await expect(async () => {
+			const res = await request.get(`${SUPABASE_URL}/rest/v1/expense_details?label=eq.${encodeURIComponent(label)}&select=id`, { headers: h });
+			expect((await res.json()).length).toBe(1);
+		}).toPass({ timeout: 10_000 });
 	});
 });
