@@ -215,6 +215,11 @@ test.describe('Expense payee field', () => {
 	});
 
 	test('full flow with existing payee', async ({ page }) => {
+		// Does meaningfully more setup than its siblings (fillBaseFields plus
+		// two combobox interactions), which occasionally runs past the
+		// default 5s test timeout — verified locally (2/15 runs) even after
+		// fixing the separate PayeeCombobox auto-focus bug below.
+		test.setTimeout(10_000);
 		await openDialog(page);
 		await fillBaseFields(page);
 		const dialog = page.getByRole('dialog');
@@ -227,6 +232,9 @@ test.describe('Expense payee field', () => {
 	});
 
 	test('full flow with novel payee', async ({ page }) => {
+		// Same rationale as "full flow with existing payee" above, plus an
+		// extra /payees navigation.
+		test.setTimeout(10_000);
 		await openDialog(page);
 		await fillBaseFields(page);
 		const dialog = page.getByRole('dialog');
