@@ -32,9 +32,10 @@
 			!payees.some((p) => p.label.toLowerCase() === payeeQuery.trim().toLowerCase()),
 	);
 
-	$effect(() => {
-		if (!selected) requestAnimationFrame(() => payeeInput?.focus());
-	});
+	function handleClear() {
+		onclear();
+		requestAnimationFrame(() => payeeInput?.focus());
+	}
 
 	function selectExisting(payee: Payee) {
 		onselect({ id: payee.id, label: payee.label });
@@ -67,7 +68,7 @@
 		{#if selected}
 			<span class="pill {selected.novel ? 'pill-novel' : 'pill-existing'}">
 				{selected.novel ? "+ " : ""}{selected.label}
-				<button class="pill-x" onclick={onclear} aria-label="Remove payee">
+				<button class="pill-x" onclick={handleClear} aria-label="Remove payee">
 					<X size={12} strokeWidth={3} />
 				</button>
 			</span>
