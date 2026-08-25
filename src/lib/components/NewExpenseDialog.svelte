@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Icon from "./Icon.svelte";
 	import X from "@lucide/svelte/icons/x";
 	import Dialog from "./Dialog.svelte";
+	import AccountCombobox from "./AccountCombobox.svelte";
 	import { notifyError } from "$lib/stores/snackbar";
 	import { formatBalance } from "$lib/format";
 
@@ -31,8 +31,6 @@
 	let amount = $state("");
 	let label = $state("");
 	let sourceId = $state("");
-	let searchQuery = $state("");
-	let showSourceDropdown = $state(false);
 	let dateStr = $state(new Date().toISOString().slice(0, 10));
 	let busy = $state(false);
 
@@ -41,11 +39,6 @@
 	let selectedPayee = $state<{ id?: string; label: string; novel: boolean } | null>(null);
 
 	let selectedSource = $derived(accounts.find((a) => a.id === sourceId));
-	let filteredAccounts = $derived(
-		searchQuery
-			? accounts.filter((a) => a.label.toLowerCase().includes(searchQuery.toLowerCase()))
-			: accounts,
-	);
 	let filteredPayees = $derived(
 		payeeQuery
 			? payees.filter((p) => p.label.toLowerCase().includes(payeeQuery.toLowerCase()))
@@ -56,7 +49,6 @@
 			!payees.some((p) => p.label.toLowerCase() === payeeQuery.trim().toLowerCase()),
 	);
 	let amountInput: HTMLInputElement | undefined = $state();
-	let searchInput: HTMLInputElement | undefined = $state();
 	let payeeInput: HTMLInputElement | undefined = $state();
 
 	$effect(() => {
@@ -64,8 +56,6 @@
 			amount = "";
 			label = "";
 			sourceId = accounts.length > 0 ? accounts[0].id : "";
-			searchQuery = "";
-			showSourceDropdown = false;
 			dateStr = new Date().toISOString().slice(0, 10);
 			busy = false;
 			payeeQuery = "";
@@ -74,12 +64,6 @@
 			amountInput?.focus();
 		}
 	});
-
-	function selectSource(id: string) {
-		sourceId = id;
-		searchQuery = "";
-		showSourceDropdown = false;
-	}
 
 	function selectExistingPayee(payee: { id: string; label: string }) {
 		selectedPayee = { id: payee.id, label: payee.label, novel: false };
@@ -167,59 +151,7 @@
 			/>
 		</div>
 
-		<div class="source-endpoint">
-			<div class="source-combo">
-				<div class="source-combo-icon">
-					{#if searchQuery === "" && selectedSource}
-						<Icon name={selectedSource.icon} />
-					{/if}
-				</div>
-				<input
-					class="source-combo-input"
-					type="text"
-					placeholder={selectedSource && searchQuery === ""
-						? selectedSource.label
-						: "Search account…"}
-					value={searchQuery}
-					oninput={(e) => {
-						searchQuery = (e.target as HTMLInputElement).value;
-						if (searchQuery) sourceId = "";
-						showSourceDropdown = true;
-					}}
-					onfocus={() => {
-						showSourceDropdown = true;
-					}}
-					onblur={() => setTimeout(() => (showSourceDropdown = false), 150)}
-					bind:this={searchInput}
-				/>
-				{#if selectedSource && searchQuery === ""}
-					<span class="source-combo-balance"
-						>{formatBalance(selectedSource.balance, selectedSource.currency, "none")}</span
-					>
-				{/if}
-			</div>
-			{#if showSourceDropdown && filteredAccounts.length > 0}
-				<div class="source-dropdown">
-					{#each filteredAccounts as acct}
-						<div
-							class="source-option"
-							role="button"
-							tabindex="0"
-							onclick={() => selectSource(acct.id)}
-							onkeydown={(e) => e.key === "Enter" && selectSource(acct.id)}
-						>
-							<div class="source-option-icon"><Icon name={acct.icon} /></div>
-							<div class="source-option-text">
-								<span class="source-option-label">{acct.label}</span>
-								<span class="source-option-balance"
-									>{formatBalance(acct.balance, acct.currency, "none")}</span
-								>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		</div>
+		<AccountCombobox {accounts} selected={selectedSource} onselect={(id) => (sourceId = id)} />
 
 		<div class="payee-endpoint">
 			<div class="pills">
@@ -345,59 +277,6 @@
 		-moz-appearance: textfield;
 	}
 
-	.source-endpoint {
-		width: 100%;
-		position: relative;
-	}
-
-	.source-combo {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		width: 100%;
-		padding: 0.5rem 0.75rem;
-		border-radius: 0.625rem;
-		border: 0.0625rem solid rgba(255, 255, 255, 0.1);
-		background: var(--meta-darker);
-		color: var(--meta-light);
-		transition: border-color 0.15s;
-	}
-
-	.source-combo:focus-within {
-		border-color: var(--meta-accent);
-	}
-
-	.source-combo-icon {
-		width: 1.75rem;
-		height: 1.75rem;
-		flex-shrink: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.source-combo-input {
-		flex: 1;
-		background: transparent;
-		border: none;
-		outline: none;
-		color: var(--meta-light);
-		font-size: 0.875rem;
-		font-weight: 600;
-		min-width: 0;
-	}
-
-	.source-combo-input::placeholder {
-		color: rgba(255, 255, 255, 0.35);
-	}
-
-	.source-combo-balance {
-		font-size: 0.6875rem;
-		font-weight: 500;
-		color: var(--meta-silver);
-		white-space: nowrap;
-	}
-
 	.source-dropdown {
 		position: absolute;
 		top: 100%;
@@ -430,37 +309,6 @@
 	}
 	.source-option:focus-visible {
 		outline: none;
-	}
-
-	.source-option-icon {
-		width: 1.75rem;
-		height: 1.75rem;
-		flex-shrink: 0;
-	}
-
-	.source-option-text {
-		display: flex;
-		flex-direction: column;
-		min-width: 0;
-	}
-
-	.source-option-label {
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: var(--meta-light);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		text-align: left;
-	}
-
-	.source-option-balance {
-		font-size: 0.6875rem;
-		font-weight: 500;
-		color: var(--meta-silver);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
 	}
 
 	.payee-endpoint {
