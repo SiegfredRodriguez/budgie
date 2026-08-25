@@ -4,6 +4,7 @@
 	import TagsField from "./TagsField.svelte";
 	import Dialog from "./Dialog.svelte";
 	import { createTag } from "$lib/stores/tags";
+	import { ensureTagSynced } from "$lib/local/tags";
 	import { notifyError } from "$lib/stores/snackbar";
 
 	let {
@@ -68,7 +69,12 @@
 				const created = await createTag(value);
 				allTagIds.push(created.id);
 			}
-			await onsubmit({ label: label.trim(), icon, tagIds: allTagIds });
+			// create-payee still writes payees_tags with a foreign key on
+			// tag_id, so every tag here needs to actually exist server-side
+			// first — including ones the user picked from the list, which
+			// could in principle still be an unsynced local-only write.
+			const confirmedTagIds = await Promise.all(allTagIds.map((id) => ensureTagSynced(id)));
+			await onsubmit({ label: label.trim(), icon, tagIds: confirmedTagIds });
 		} catch (e: any) {
 			notifyError(e?.message ?? "Failed to create payee");
 		} finally {

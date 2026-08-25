@@ -2,6 +2,7 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
 
 const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const KEY = process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 let accessToken: string;
 let userId: string;
@@ -120,10 +121,15 @@ test.afterAll(async ({ request }) => {
 			await request.delete(`${SUPABASE_URL}/rest/v1/payees?id=eq.${p.id}`, { headers: h });
 		}
 	}
-	const tagRes = await request.get(`${SUPABASE_URL}/rest/v1/tags?value=like.*E2E*&select=id`, { headers: apiHeaders() });
+	// Tags are permanent by design — no role can DELETE one, not even
+	// service_role — so this soft-deletes instead (needs the service role:
+	// `authenticated` has no UPDATE on `tags` either), and matches
+	// case-insensitively since sanitized values are always lowercase.
+	const tagH = { apikey: KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
+	const tagRes = await request.get(`${SUPABASE_URL}/rest/v1/tags?value=ilike.*e2e*&is_deleted=eq.false&select=id`, { headers: tagH });
 	if (tagRes.ok()) {
 		for (const t of await tagRes.json()) {
-			await request.delete(`${SUPABASE_URL}/rest/v1/tags?id=eq.${t.id}`, { headers: apiHeaders() });
+			await request.patch(`${SUPABASE_URL}/rest/v1/tags?id=eq.${t.id}`, { headers: tagH, data: { is_deleted: true } });
 		}
 	}
 });
