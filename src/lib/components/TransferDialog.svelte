@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Icon from "./Icon.svelte";
-	import { formatBalance } from "$lib/format";
 	import Dialog from "./Dialog.svelte";
 	import AccountCombobox from "./AccountCombobox.svelte";
 

@@ -3,7 +3,6 @@
 	import AccountCombobox from "./AccountCombobox.svelte";
 	import PayeeCombobox from "./PayeeCombobox.svelte";
 	import { notifyError } from "$lib/stores/snackbar";
-	import { formatBalance } from "$lib/format";
 
 	let {
 		show,
