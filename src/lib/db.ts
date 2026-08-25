@@ -70,12 +70,47 @@ export interface LocalTransaction {
 	_synced: 0 | 1;
 }
 
+/** Expenses are the same "predict, await the real (server-authoritative,
+ * non-retriable) call, reconcile or roll back" shape as TOP_UP/TRANSFER
+ * transactions, for the same reason — create-expense both moves money and
+ * can insert a brand-new payee atomically, so it can't be safely retried
+ * blind. No `is_deleted`: no delete-expense feature exists. */
+export interface LocalExpenseDetail {
+	id: string;
+	user_id: string;
+	label: string;
+	date: string;
+	transaction_id: string;
+	payee_id: string | null;
+	/** Set only on an optimistic prediction for a *novel* payee (no
+	 * `payee_id` yet) so the UI has something to render before the real
+	 * payee row exists locally — never sent to or read back from the
+	 * server, and cleared once reconciliation replaces this row with the
+	 * server's real one (which by then has a real `payee_id`). */
+	novel_payee_label?: string;
+	last_modified: string;
+	_synced: 0 | 1;
+}
+
+/** Junction row for the expense↔tag many-to-many, copied atomically from
+ * the payee's own tags at expense-creation time — never independently
+ * added to or removed from afterward, so (like LocalPayeeTag) no
+ * `is_deleted`. */
+export interface LocalExpenseTag {
+	expense_id: string;
+	tag_id: string;
+	last_modified: string;
+	_synced: 0 | 1;
+}
+
 const db = new Dexie("budgie") as Dexie & {
 	tags: EntityTable<LocalTag, "id">;
 	payees: EntityTable<LocalPayee, "id">;
 	payeesTags: Dexie.Table<LocalPayeeTag, [string, string]>;
 	accounts: EntityTable<LocalAccount, "id">;
 	transactions: EntityTable<LocalTransaction, "id">;
+	expenseDetails: EntityTable<LocalExpenseDetail, "id">;
+	expensesTags: Dexie.Table<LocalExpenseTag, [string, string]>;
 };
 
 db.version(1).stores({
@@ -90,6 +125,11 @@ db.version(2).stores({
 db.version(3).stores({
 	accounts: "id, user_id, created_at, last_modified, _synced",
 	transactions: "id, account_id, created_at, last_modified, _synced",
+});
+
+db.version(4).stores({
+	expenseDetails: "id, user_id, date, transaction_id, payee_id, last_modified, _synced",
+	expensesTags: "[expense_id+tag_id], expense_id, tag_id, last_modified, _synced",
 });
 
 export { db };
