@@ -1,40 +1,18 @@
 import { writable } from "svelte/store";
 import { supabase } from "$lib/supabase";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
-import { callFunction } from "$lib/api";
+import { db } from "$lib/db";
+import { createTag as createTagLocal, pullTags } from "$lib/local/tags";
+import { scheduleReconciliation } from "$lib/local/sync";
 import { notifyError } from "./snackbar";
 import { tagsReady } from "./init";
 import type { TagRow } from "$lib/types/db";
 
-export interface Tag {
-	id: string;
-	value: string;
-}
-
-const initial: Tag[] = [];
-
-export const tags = writable<Tag[]>(initial);
 export const tagsLoading = writable(false);
-
-function mapRow(r: TagRow): Tag {
-	return { id: r.id, value: r.value };
-}
-
-export async function loadTags() {
-	tagsLoading.set(true);
-	try {
-		const { data, error } = await supabase
-			.from("tags")
-			.select("*")
-			.order("value", { ascending: true });
-		if (error) return;
-		tags.set((data ?? []).map(mapRow));
-	} finally {
-		tagsLoading.set(false);
-	}
-}
+export const createTag = createTagLocal;
 
 let sub: Awaited<ReturnType<typeof supabase.channel>> | undefined;
+let stopReconciliation: (() => void) | undefined;
 
 function subscribeTags() {
 	if (sub) return;
@@ -43,20 +21,21 @@ function subscribeTags() {
 		.on(
 			"postgres_changes",
 			{ event: "*", schema: "public", table: "tags" },
-			(payload: RealtimePostgresChangesPayload<TagRow>) => {
-				if (payload.eventType === "INSERT") {
-					tags.update((current) => [...current, mapRow(payload.new)]);
-				} else if (payload.eventType === "UPDATE") {
-					tags.update((current) =>
-						current.map((t) =>
-							t.id === payload.new.id ? mapRow(payload.new) : t,
-						),
-					);
-				} else if (payload.eventType === "DELETE") {
-					tags.update((current) =>
-						current.filter((t) => t.id !== payload.old.id),
-					);
+			(payload: RealtimePostgresChangesPayload<TagRow & { last_modified: string; is_deleted: boolean }>) => {
+				if (payload.eventType === "DELETE") {
+					// Tags are never hard-deleted server-side; a DELETE payload
+					// would only happen via manual intervention. Drop it locally too.
+					db.tags.delete(payload.old.id as string);
+					return;
 				}
+				const row = payload.new;
+				db.tags.put({
+					id: row.id,
+					value: row.value,
+					last_modified: row.last_modified,
+					is_deleted: row.is_deleted,
+					_synced: 1,
+				});
 			},
 		)
 		.subscribe();
@@ -65,20 +44,23 @@ function subscribeTags() {
 export function unsubscribeTags() {
 	sub?.unsubscribe();
 	sub = undefined;
+	stopReconciliation?.();
+	stopReconciliation = undefined;
 }
 
 export async function initTags() {
 	subscribeTags();
+	tagsLoading.set(true);
 	try {
-		await loadTags();
+		await pullTags();
 	} catch (e) {
 		console.error("Failed to load tags", e);
 		notifyError("Failed to load tags");
+	} finally {
+		tagsLoading.set(false);
 	}
+	stopReconciliation = scheduleReconciliation(() => {
+		pullTags().catch((e) => console.error("Tag reconciliation failed", e));
+	});
 	tagsReady.set(true);
-}
-
-export async function createTag(value: string) {
-	const raw = await callFunction<TagRow>("create-tag", { value });
-	return mapRow(raw);
 }

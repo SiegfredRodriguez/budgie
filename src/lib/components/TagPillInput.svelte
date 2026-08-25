@@ -1,6 +1,8 @@
 <script lang="ts">
-	import { tags } from "$lib/stores/tags";
+	import { observeTags } from "$lib/local/tags";
 	import X from "@lucide/svelte/icons/x";
+
+	const tags = observeTags();
 
 	let {
 		selected = [],

@@ -4,8 +4,11 @@
 	import Plus from "@lucide/svelte/icons/plus";
 	import NewTagDialog from "$lib/components/NewTagDialog.svelte";
 	import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-	import { tags, tagsLoading, createTag } from "$lib/stores/tags";
+	import { observeTags } from "$lib/local/tags";
+	import { tagsLoading, createTag } from "$lib/stores/tags";
 	import { notifyError } from "$lib/stores/snackbar";
+
+	const tags = observeTags();
 
 	let showNewTag = $state(false);
 	let query = $state("");

@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
 	const auth = await authenticate(req);
 	if (auth instanceof Response) return auth;
 
-	const { value } = await req.json();
+	const { id, value } = await req.json();
 
 	if (!value || typeof value !== "string") {
 		return jsonResponse({ error: "value is required" }, 400);
@@ -28,11 +28,34 @@ Deno.serve(async (req) => {
 
 	const supabase = serviceClient();
 
-	const { data, error } = await supabase
-		.from("tags")
-		.insert({ value: sanitized })
-		.select()
-		.single();
+	// A client-generated `id` lets an optimistic local write and its sync
+	// push agree on the same row identity, and makes a retried push (e.g.
+	// after a dropped response) idempotent instead of erroring.
+	const write =
+		typeof id === "string" && id.length > 0
+			? supabase.from("tags").upsert({ id, value: sanitized }, { onConflict: "id" }).select().single()
+			: supabase.from("tags").insert({ value: sanitized }).select().single();
+
+	let { data, error } = await write;
+
+	if (error?.code === "23505") {
+		// Another id already holds this value — most likely two offline
+		// clients independently created the same tag, but could also be a
+		// previously soft-deleted one being recreated. Treat it as success
+		// and hand back the canonical row (un-deleting it if needed) so the
+		// caller can reconcile its local record onto it, instead of erroring.
+		const revived = await supabase
+			.from("tags")
+			.update({ is_deleted: false })
+			.eq("value", sanitized)
+			.select()
+			.single();
+		if (revived.error) {
+			return jsonResponse({ error: revived.error.message }, 500);
+		}
+		data = revived.data;
+		error = null;
+	}
 
 	if (error) {
 		return jsonResponse({ error: error.message }, 500);

@@ -4,7 +4,7 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { callFunction } from "$lib/api";
 import { notifyError } from "./snackbar";
 import { payeesReady } from "./init";
-import type { Tag } from "./tags";
+import type { Tag } from "$lib/local/tags";
 import type { PayeeRow } from "$lib/types/db";
 
 export interface Payee {

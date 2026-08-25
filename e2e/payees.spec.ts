@@ -2,6 +2,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 
 const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const KEY = process.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 let accessToken: string;
 let userId: string;
@@ -18,10 +19,18 @@ async function cleanupE2ePayeesAndTags(request: APIRequestContext) {
 			await request.delete(`${SUPABASE_URL}/rest/v1/payees?id=eq.${p.id}`, { headers: h });
 		}
 	}
-	const tagRes = await request.get(`${SUPABASE_URL}/rest/v1/tags?value=like.*E2E*&select=id`, { headers: h });
+	// Tags are permanent by design — no role has ever had DELETE on `tags`,
+	// not even service_role, so this soft-deletes instead (which needs the
+	// service role: `authenticated` has no UPDATE on `tags` either). Also
+	// matches case-insensitively (`ilike`, not `like`): tag values are
+	// sanitized to lowercase before storage, so a literal "*E2E*" pattern
+	// silently missed every one of them and this cleanup never actually
+	// touched a tag before now.
+	const tagH = { apikey: KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}`, 'Content-Type': 'application/json' };
+	const tagRes = await request.get(`${SUPABASE_URL}/rest/v1/tags?value=ilike.*e2e*&is_deleted=eq.false&select=id`, { headers: tagH });
 	if (tagRes.ok()) {
 		for (const t of await tagRes.json()) {
-			await request.delete(`${SUPABASE_URL}/rest/v1/tags?id=eq.${t.id}`, { headers: h });
+			await request.patch(`${SUPABASE_URL}/rest/v1/tags?id=eq.${t.id}`, { headers: tagH, data: { is_deleted: true } });
 		}
 	}
 }
