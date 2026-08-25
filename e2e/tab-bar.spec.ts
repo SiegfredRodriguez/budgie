@@ -20,9 +20,19 @@ test.describe('Tab bar bottom spacing', () => {
 
 	test('last account card extends behind tab bar', async ({ page }) => {
 		await page.goto('/accounts');
+		// +layout.svelte renders `{@render children()}` in two structurally
+		// different branches depending on `$session` (no TabBar/`#app`
+		// wrapper vs. with one) — session starts null and flips to a real
+		// value once dev-mode auto-login resolves, which tears down and
+		// remounts the whole routed page once. Every other spec sidesteps
+		// this by waiting for the splash overlay (a hardcoded 2s minimum,
+		// well past the remount) before touching the page; this test needs
+		// the same wait, or it can grab a card that gets replaced moments
+		// later by the remount.
+		await page.locator('.splash-overlay.done').waitFor({ state: 'attached', timeout: 15_000 });
 
-		await page.waitForSelector('.card-list');
 		const cards = page.locator('.card-list > .card');
+		await cards.first().waitFor({ state: 'visible' });
 		const lastCard = cards.last();
 
 		await lastCard.scrollIntoViewIfNeeded();

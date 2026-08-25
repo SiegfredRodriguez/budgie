@@ -36,10 +36,46 @@ export interface LocalPayeeTag {
 	_synced: 0 | 1;
 }
 
+export interface LocalAccount {
+	id: string;
+	name: string;
+	icon: string;
+	currency: string;
+	balance: number;
+	user_id: string;
+	created_at: string;
+	last_modified: string;
+	is_deleted: boolean;
+	_synced: 0 | 1;
+}
+
+/** Money-moving transactions (TOP_UP/TRANSFER) are never retried
+ * automatically like tags/payees/account-creation are — calling the RPC
+ * twice really moves money twice, so there's no safe generic "retry
+ * unsynced rows" path for them. `_synced: 0` here instead means "an
+ * optimistic prediction of a transaction whose real outcome (success,
+ * failure, or genuinely unknown because the tab closed mid-request) hasn't
+ * been confirmed yet" — `local/accounts.ts` reconciles or discards these
+ * explicitly rather than blindly re-pushing them. No `is_deleted`: nothing
+ * ever deletes a transaction. */
+export interface LocalTransaction {
+	id: string;
+	account_id: string;
+	type: string;
+	amount: number;
+	currency: string;
+	description: string | null;
+	created_at: string;
+	last_modified: string;
+	_synced: 0 | 1;
+}
+
 const db = new Dexie("budgie") as Dexie & {
 	tags: EntityTable<LocalTag, "id">;
 	payees: EntityTable<LocalPayee, "id">;
 	payeesTags: Dexie.Table<LocalPayeeTag, [string, string]>;
+	accounts: EntityTable<LocalAccount, "id">;
+	transactions: EntityTable<LocalTransaction, "id">;
 };
 
 db.version(1).stores({
@@ -49,6 +85,11 @@ db.version(1).stores({
 db.version(2).stores({
 	payees: "id, user_id, label, last_modified, _synced",
 	payeesTags: "[payee_id+tag_id], payee_id, tag_id, last_modified, _synced",
+});
+
+db.version(3).stores({
+	accounts: "id, user_id, created_at, last_modified, _synced",
+	transactions: "id, account_id, created_at, last_modified, _synced",
 });
 
 export { db };

@@ -1,59 +1,112 @@
-import { writable } from 'svelte/store';
-import { supabase } from '$lib/supabase';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { callFunction } from '$lib/api';
-import { notifyError } from './snackbar';
-import { accountsReady } from './init';
-import type { AccountRow } from '$lib/types/db';
+import { writable } from "svelte/store";
+import { supabase } from "$lib/supabase";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { db } from "$lib/db";
+import {
+	createAccount as createAccountLocal,
+	deleteAccount as deleteAccountLocal,
+	topUpAccount as topUpAccountLocal,
+	transferAccount as transferAccountLocal,
+	pullAccounts,
+} from "$lib/local/accounts";
+import { scheduleReconciliation } from "$lib/local/sync";
+import { notifyError } from "./snackbar";
+import { accountsReady } from "./init";
 
-export interface Account {
-	id: string;
-	icon: string;
-	label: string;
-	currency: string;
-	balance: number;
-}
-
-const initial: Account[] = [];
-
-export const accounts = writable<Account[]>(initial);
 export const accountsLoading = writable(false);
 
-function mapRow(r: AccountRow): Account {
-	return { id: r.id, icon: r.icon, label: r.name, currency: r.currency, balance: r.balance };
+let currentUserId: string | undefined;
+
+export async function addAccount(account: { label: string; icon: string; currency: string; balance: number }) {
+	if (!currentUserId) throw new Error("Not signed in");
+	return createAccountLocal(account.label, account.icon, account.currency, account.balance, currentUserId);
 }
 
-export async function loadAccounts() {
-	accountsLoading.set(true);
-	try {
-		const { data, error } = await supabase
-			.from('accounts')
-			.select('id,name,icon,currency,balance')
-			.order('created_at', { ascending: true });
-		if (error) return;
-		accounts.set((data ?? []).map(mapRow));
-	} finally {
-		accountsLoading.set(false);
-	}
+export async function deleteAccount(id: string) {
+	await deleteAccountLocal(id);
+}
+
+export async function topUpAccount(id: string, amount: number, currency: string) {
+	await topUpAccountLocal(id, amount, currency);
+}
+
+export async function transferAccount(fromId: string, toId: string, amount: number, currency: string) {
+	await transferAccountLocal(fromId, toId, amount, currency);
 }
 
 let sub: Awaited<ReturnType<typeof supabase.channel>> | undefined;
+let stopReconciliation: (() => void) | undefined;
+
+interface AccountRealtimeRow {
+	id: string;
+	name: string;
+	icon: string;
+	currency: string;
+	balance: number;
+	user_id: string;
+	created_at: string;
+	last_modified: string;
+	is_deleted: boolean;
+}
+
+interface TransactionRealtimeRow {
+	id: string;
+	account_id: string;
+	type: string;
+	amount: number;
+	currency: string;
+	description: string | null;
+	created_at: string;
+	last_modified: string;
+}
 
 function subscribeAccounts() {
 	if (sub) return;
 	sub = supabase
-		.channel('accounts-changes')
+		.channel("accounts-changes")
 		.on(
-			'postgres_changes',
-			{ event: '*', schema: 'public', table: 'accounts' },
-			(payload: RealtimePostgresChangesPayload<AccountRow>) => {
-				if (payload.eventType === 'INSERT') {
-					accounts.update((current) => [...current, mapRow(payload.new)]);
-				} else if (payload.eventType === 'UPDATE') {
-					accounts.update((current) => current.map((a) => (a.id === payload.new.id ? mapRow(payload.new) : a)));
-				} else if (payload.eventType === 'DELETE') {
-					accounts.update((current) => current.filter((a) => a.id !== payload.old.id));
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "accounts" },
+			(payload: RealtimePostgresChangesPayload<AccountRealtimeRow>) => {
+				if (payload.eventType === "DELETE") {
+					db.accounts.delete(payload.old.id as string);
+					return;
 				}
+				const row = payload.new;
+				db.accounts.put({
+					id: row.id,
+					name: row.name,
+					icon: row.icon ?? "",
+					currency: row.currency,
+					balance: row.balance,
+					user_id: row.user_id,
+					created_at: row.created_at,
+					last_modified: row.last_modified,
+					is_deleted: row.is_deleted,
+					_synced: 1,
+				});
+			},
+		)
+		.on(
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "transactions" },
+			(payload: RealtimePostgresChangesPayload<TransactionRealtimeRow>) => {
+				if (payload.eventType === "DELETE") {
+					db.transactions.delete(payload.old.id as string);
+					return;
+				}
+				const row = payload.new;
+				db.transactions.put({
+					id: row.id,
+					account_id: row.account_id,
+					type: row.type,
+					amount: row.amount,
+					currency: row.currency,
+					description: row.description,
+					created_at: row.created_at,
+					last_modified: row.last_modified,
+					_synced: 1,
+				});
 			},
 		)
 		.subscribe();
@@ -62,47 +115,32 @@ function subscribeAccounts() {
 export function unsubscribeAccounts() {
 	sub?.unsubscribe();
 	sub = undefined;
+	stopReconciliation?.();
+	stopReconciliation = undefined;
 }
 
 export async function initAccounts() {
-	subscribeAccounts();
-	try {
-		await loadAccounts();
-	} catch (e) {
-		console.error('Failed to load accounts', e);
-		notifyError('Failed to load accounts');
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
+	if (!session) {
+		accountsReady.set(true);
+		return;
 	}
+	currentUserId = session.user.id;
+
+	subscribeAccounts();
+	accountsLoading.set(true);
+	try {
+		await pullAccounts(currentUserId);
+	} catch (e) {
+		console.error("Failed to load accounts", e);
+		notifyError("Failed to load accounts");
+	} finally {
+		accountsLoading.set(false);
+	}
+	stopReconciliation = scheduleReconciliation(() => {
+		if (currentUserId) pullAccounts(currentUserId).catch((e) => console.error("Account reconciliation failed", e));
+	});
 	accountsReady.set(true);
-}
-
-export async function addAccount(account: Omit<Account, 'id'>) {
-	const raw = await callFunction<AccountRow>('create-account', {
-		name: account.label,
-		icon: account.icon,
-		currency: account.currency,
-		balance: account.balance,
-	});
-	return mapRow(raw);
-}
-
-export async function deleteAccount(id: string) {
-	const { error } = await supabase.from('accounts').delete().eq('id', id);
-	if (error) throw new Error(error.message);
-}
-
-export async function topUpAccount(id: string, amount: number, currency: string) {
-	await callFunction('top-up-account', {
-		account_id: id,
-		amount,
-		currency,
-	});
-}
-
-export async function transferAccount(fromId: string, toId: string, amount: number, currency: string) {
-	await callFunction('transfer-account', {
-		from_id: fromId,
-		to_id: toId,
-		amount,
-		currency,
-	});
 }

@@ -1,7 +1,10 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { accounts, accountsLoading, topUpAccount, transferAccount, deleteAccount, addAccount } from "$lib/stores/accounts";
+    import { accountsLoading, topUpAccount, transferAccount, deleteAccount, addAccount } from "$lib/stores/accounts";
+    import { observeAccounts } from "$lib/local/accounts";
     import { notifyError } from "$lib/stores/snackbar";
+
+    const accounts = observeAccounts();
     import { formatBalance } from "$lib/format";
     import AccountCard from "$lib/components/AccountCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
@@ -156,7 +159,7 @@
         <LoadingSpinner style="position: relative; z-index: 2; padding-bottom: 6rem; margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px" />
     {:else}
         <div class="card-list" style="margin-top: -{headerHeight}px; padding-top: {headerHeight + 12}px">
-            {#each $accounts as account}
+            {#each $accounts as account (account.id)}
                 <AccountCard
                     id={account.id}
                     icon={account.icon}

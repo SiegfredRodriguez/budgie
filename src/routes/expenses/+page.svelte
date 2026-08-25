@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { accounts, accountsLoading } from "$lib/stores/accounts";
+	import { accountsLoading } from "$lib/stores/accounts";
+	import { observeAccounts, pullAccounts } from "$lib/local/accounts";
 	import { expenses, expensesLoading, loadExpenses } from "$lib/stores/expenses";
 	import { observePayees, pullPayees } from "$lib/local/payees";
 	import { session } from "$lib/stores/auth";
@@ -7,6 +8,7 @@
 	import { formatBalance } from "$lib/format";
 
 	const payees = observePayees();
+	const accounts = observeAccounts();
 	import ExpenseHero from "$lib/components/ExpenseHero.svelte";
 	import ExpenseItem from "$lib/components/ExpenseItem.svelte";
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
@@ -91,7 +93,7 @@
 			payee_label: data.payee_label ?? null,
 		});
 		closeDialog();
-		await Promise.all([loadExpenses(), pullPayees($session!.user.id)]);
+		await Promise.all([loadExpenses(), pullPayees($session!.user.id), pullAccounts($session!.user.id)]);
 	}
 </script>
 
