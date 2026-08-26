@@ -43,7 +43,6 @@ interface AccountRealtimeRow {
 	name: string;
 	icon: string;
 	currency: string;
-	balance: number;
 	user_id: string;
 	created_at: string;
 	last_modified: string;
@@ -79,7 +78,6 @@ function subscribeAccounts() {
 					name: row.name,
 					icon: row.icon ?? "",
 					currency: row.currency,
-					balance: row.balance,
 					user_id: row.user_id,
 					created_at: row.created_at,
 					last_modified: row.last_modified,

@@ -33,6 +33,17 @@ async function revealBalance(card: ReturnType<typeof cardFor>) {
 	await card.locator('.eye-btn').click();
 }
 
+// accounts.balance no longer exists as a column (transactions is the sole
+// spine of every money fact) — every server-side balance check now folds
+// transactions the same way the RPCs and the client both do.
+async function fetchFoldedBalance(request: APIRequestContext, accountId: string): Promise<number> {
+	const res = await request.get(`${SUPABASE_URL}/rest/v1/transactions?account_id=eq.${accountId}&select=amount`, {
+		headers: { apikey: KEY, Authorization: `Bearer ${accessToken}` },
+	});
+	const rows: { amount: number }[] = await res.json();
+	return rows.reduce((sum, r) => sum + r.amount, 0);
+}
+
 test.beforeAll(async ({ request }) => {
 	const authRes = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
 		headers: { 'Content-Type': 'application/json', apikey: KEY },
@@ -106,7 +117,7 @@ test.describe('Accounts', () => {
 		test.setTimeout(20_000);
 		const sourceName = v('Transfer Source');
 		const targetName = v('Transfer Target');
-		await createAccount(request, sourceName, 1000);
+		const sourceId = await createAccount(request, sourceName, 1000);
 		await createAccount(request, targetName, 0);
 		await page.goto('/accounts');
 
@@ -135,6 +146,24 @@ test.describe('Accounts', () => {
 		await revealBalance(targetCard);
 		await expect(sourceCard.locator('.card-balance')).toHaveText('PHP 600.00');
 		await expect(targetCard.locator('.card-balance')).toHaveText('PHP 400.00');
+
+		// transactions.paired_transaction_id (00050) should durably link a
+		// transfer's two legs server-side, not just the implicit
+		// same-type/opposite-amount/close-timestamp convention this replaces.
+		const h = { apikey: KEY, Authorization: `Bearer ${accessToken}` };
+		const res = await request.get(
+			`${SUPABASE_URL}/rest/v1/transactions?account_id=eq.${sourceId}&type=eq.TRANSFER&select=id,paired_transaction_id`,
+			{ headers: h },
+		);
+		const [fromRow] = await res.json();
+		expect(fromRow.paired_transaction_id).toBeTruthy();
+
+		const pairedRes = await request.get(
+			`${SUPABASE_URL}/rest/v1/transactions?id=eq.${fromRow.paired_transaction_id}&select=id,paired_transaction_id`,
+			{ headers: h },
+		);
+		const [toRow] = await pairedRes.json();
+		expect(toRow.paired_transaction_id).toBe(fromRow.id);
 	});
 
 	test('offline: creates instantly, absent from server until reconnect, then syncs', async ({ page, request, context }) => {
@@ -187,14 +216,11 @@ test.describe('Accounts', () => {
 		await expect(dialog).not.toBeVisible();
 		await expect(card.locator('.card-balance')).toHaveText('PHP 1,250.00');
 
-		const h = { apikey: KEY, Authorization: `Bearer ${accessToken}` };
-		const whileOffline = await request.get(`${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}&select=balance`, { headers: h });
-		expect((await whileOffline.json())[0].balance).toBe(1000);
+		expect(await fetchFoldedBalance(request, accountId)).toBe(1000);
 
 		await context.setOffline(false);
 		await expect(async () => {
-			const res = await request.get(`${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}&select=balance`, { headers: h });
-			expect((await res.json())[0].balance).toBe(1250);
+			expect(await fetchFoldedBalance(request, accountId)).toBe(1250);
 		}).toPass({ timeout: 10_000 });
 	});
 
@@ -244,8 +270,7 @@ test.describe('Accounts', () => {
 		await context.setOffline(false);
 		await expect(page.locator('.snackbar.error')).toBeVisible({ timeout: 10_000 });
 
-		const res = await request.get(`${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}&select=balance`, { headers: h });
-		expect((await res.json())[0].balance).toBe(200);
+		expect(await fetchFoldedBalance(request, accountId)).toBe(200);
 
 		// Balance is now a fold over transactions, not a stored delta — this
 		// confirms the displayed number also reflects the conflicting
