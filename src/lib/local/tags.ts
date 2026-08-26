@@ -2,6 +2,7 @@ import { db } from "$lib/db";
 import { supabase } from "$lib/supabase";
 import { callFunction } from "$lib/api";
 import { liveQueryStore } from "$lib/local/liveQueryStore";
+import { uuid } from "$lib/uuid";
 
 export interface Tag {
 	id: string;
@@ -32,7 +33,7 @@ export async function createTag(value: string): Promise<Tag> {
 		return { id: existing.id, value: existing.value };
 	}
 
-	const id = crypto.randomUUID();
+	const id = uuid();
 	const now = new Date().toISOString();
 	await db.tags.put({ id, value: sanitized, last_modified: now, is_deleted: false, _synced: 0 });
 

@@ -7,12 +7,16 @@
         currency,
         description,
         date,
+        pending = false,
+        error,
     }: {
         type: string;
         amount: number;
         currency: string;
         description: string | null;
         date: string;
+        pending?: boolean;
+        error?: string;
     } = $props();
 
     let typeLabel = $derived(
@@ -61,6 +65,11 @@
         <span class="tile-type">{typeLabel}</span>
         {#if description}
             <span class="tile-desc">{description}</span>
+        {/if}
+        {#if error}
+            <span class="tile-status tile-status-error">Failed to sync: {error}</span>
+        {:else if pending}
+            <span class="tile-status tile-status-pending">Pending sync…</span>
         {/if}
     </div>
     <span class="tile-amount {amount < 0 ? "tx-red" : "tx-teal"}">{formatBalance(amount, currency, "signed")}</span>
@@ -135,6 +144,19 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+
+    .tile-status {
+        font-size: 0.6875rem;
+        font-weight: 600;
+    }
+
+    .tile-status-pending {
+        color: var(--meta-silver);
+    }
+
+    .tile-status-error {
+        color: #ff4d4d;
     }
 
     .tile-amount {

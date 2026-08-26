@@ -5,8 +5,11 @@
 	import NewPayeeDialog from "$lib/components/NewPayeeDialog.svelte";
 	import Icon from "$lib/components/Icon.svelte";
 	import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-	import { payees, payeesLoading, createPayee } from "$lib/stores/payees";
+	import { observePayees } from "$lib/local/payees";
+	import { payeesLoading, createPayee } from "$lib/stores/payees";
 	import { notifyError } from "$lib/stores/snackbar";
+
+	const payees = observePayees();
 
 	let showNewPayee = $state(false);
 	let query = $state("");

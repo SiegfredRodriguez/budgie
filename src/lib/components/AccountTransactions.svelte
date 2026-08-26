@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { onMount } from "svelte";
     import { fly } from "svelte/transition";
-    import { supabase } from "$lib/supabase";
-    import { notifyError } from "$lib/stores/snackbar";
+    import { untrack } from "svelte";
     import { formatBalance } from "$lib/format";
+    import { observeTransactions } from "$lib/local/accounts";
     import Icon from "./Icon.svelte";
     import TransactionTile from "./TransactionTile.svelte";
     import ArrowLeft from "@lucide/svelte/icons/arrow-left";
@@ -29,10 +28,14 @@
         currency: string;
         description: string | null;
         created_at: string;
+        pending: boolean;
+        error?: string;
     }
 
-    let transactions = $state<Tx[]>([]);
-    let loading = $state(true);
+    // The panel is opened for one specific account and never re-targeted at
+    // another while mounted, so this is a deliberate one-time read, not a
+    // missed-reactivity bug — untrack() says so explicitly.
+    const transactionsStore = observeTransactions(untrack(() => account.id));
 
     function toLocalDate(iso: string): string {
         const d = new Date(iso);
@@ -53,7 +56,7 @@
 
     let grouped = $derived(() => {
         const map = new Map<string, Tx[]>();
-        for (const tx of transactions) {
+        for (const tx of $transactionsStore) {
             const key = toLocalDate(tx.created_at);
             const arr = map.get(key);
             if (arr) arr.push(tx);
@@ -73,26 +76,6 @@
     function handleKey(e: KeyboardEvent) {
         if (e.key === "Escape") onclose();
     }
-
-    onMount(async () => {
-        try {
-            const { data, error } = await supabase
-                .from("transactions")
-                .select("*")
-                .eq("account_id", account.id)
-                .order("created_at", { ascending: false });
-            if (error) {
-                console.error("Transactions query error", error);
-                notifyError("Failed to load transactions");
-                return;
-            }
-            if (data) {
-                transactions = data as Tx[];
-            }
-        } finally {
-            loading = false;
-        }
-    });
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -113,9 +96,7 @@
         </div>
 
         <div class="panel-list">
-            {#if loading}
-                <div class="panel-empty">Loading...</div>
-            {:else if transactions.length === 0}
+            {#if $transactionsStore.length === 0}
                 <div class="panel-empty">No transactions yet</div>
             {:else}
                 {#each grouped() as group}
@@ -127,6 +108,8 @@
                             currency={tx.currency}
                             description={tx.description}
                             date={tx.created_at}
+                            pending={tx.pending}
+                            error={tx.error}
                         />
                     {/each}
                 {/each}

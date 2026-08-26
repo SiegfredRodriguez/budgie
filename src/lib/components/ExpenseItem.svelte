@@ -8,6 +8,8 @@
 		payeeLabel,
 		payeeIcon,
 		tags,
+		pending = false,
+		error,
 	}: {
 		label: string;
 		formatted: string;
@@ -15,6 +17,8 @@
 		payeeLabel: string | null;
 		payeeIcon: string | null;
 		tags: { id: string; value: string }[];
+		pending?: boolean;
+		error?: string;
 	} = $props();
 </script>
 
@@ -34,6 +38,11 @@
 					<span class="tag">{tag.value}</span>
 				{/each}
 			</div>
+		{/if}
+		{#if error}
+			<span class="status status-error">Failed to sync: {error}</span>
+		{:else if pending}
+			<span class="status status-pending">Pending sync…</span>
 		{/if}
 	</div>
 </div>
@@ -119,5 +128,18 @@
 		padding: 0.125rem 0.5rem;
 		white-space: nowrap;
 		flex-shrink: 0;
+	}
+
+	.status {
+		font-size: 0.6875rem;
+		font-weight: 600;
+	}
+
+	.status-pending {
+		color: var(--meta-silver);
+	}
+
+	.status-error {
+		color: #ff4d4d;
 	}
 </style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from "svelte";
 	import Dialog from "./Dialog.svelte";
 	import AccountCombobox from "./AccountCombobox.svelte";
 	import PayeeCombobox from "./PayeeCombobox.svelte";
@@ -7,14 +8,12 @@
 	let {
 		show,
 		accounts,
-		accountsLoading = false,
 		payees = [],
 		onclose,
 		onsubmit,
 	}: {
 		show: boolean;
 		accounts: Array<{ id: string; icon: string; label: string; balance: number; currency: string }>;
-		accountsLoading?: boolean;
 		payees: Array<{ id: string; label: string; icon: string }>;
 		onclose: () => void;
 		onsubmit: (data: {
@@ -42,7 +41,17 @@
 		if (show) {
 			amount = "";
 			label = "";
-			sourceId = accounts.length > 0 ? accounts[0].id : "";
+			// Deliberately not tracked: `accounts` updates live once the
+			// dialog is open (most visibly from this same dialog's own
+			// submission — createExpense debits the account optimistically
+			// before the network call resolves). Without untrack(), that
+			// reactive write re-runs this whole block — wiping the in-flight
+			// form back to defaults (including `busy`, re-enabling the
+			// submit button mid-request) instead of only resetting once when
+			// the dialog actually opens.
+			untrack(() => {
+				sourceId = accounts.length > 0 ? accounts[0].id : "";
+			});
 			dateStr = new Date().toISOString().slice(0, 10);
 			busy = false;
 			selectedPayee = null;
@@ -67,6 +76,10 @@
 		if (!amount || !label || !sourceId || !dateStr || !selectedPayee) return;
 		busy = true;
 		try {
+			// createExpense (local/expenses.ts) ensures the account and, for
+			// an existing payee, the payee itself are server-confirmed before
+			// it fires create-expense — same FK reasoning as ensureTagSynced
+			// in NewPayeeDialog, just centralized there now instead of here.
 			await onsubmit({
 				account_id: sourceId,
 				amount: parseFloat(amount),

@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 	if (auth instanceof Response) return auth;
 	const { userId } = auth;
 
-	const { name, icon, currency, balance } = await req.json();
+	const { id, transaction_id, name, icon, currency, balance } = await req.json();
 
 	if (!name || typeof name !== "string") {
 		return jsonResponse({ error: "name is required" }, 400);
@@ -28,6 +28,8 @@ Deno.serve(async (req) => {
 			p_icon: icon || "bank",
 			p_currency: currency || "PHP",
 			p_balance: typeof balance === "number" ? balance : 0,
+			p_id: id || undefined,
+			p_transaction_id: transaction_id || undefined,
 		},
 	);
 

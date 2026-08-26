@@ -1,82 +1,80 @@
-import { writable } from 'svelte/store';
-import { supabase } from '$lib/supabase';
-import { notifyError } from './snackbar';
-import { expensesReady } from './init';
-import type { ExpenseDetailRow } from '$lib/types/db';
+import { writable } from "svelte/store";
+import { supabase } from "$lib/supabase";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import { db } from "$lib/db";
+import { createExpense as createExpenseLocal, pullExpenses, type CreateExpenseInput } from "$lib/local/expenses";
+import { scheduleReconciliation } from "$lib/local/sync";
+import { notifyError } from "./snackbar";
+import { expensesReady } from "./init";
 
-export interface Expense {
-	id: string;
-	amount: number;
-	date: string;
-	label: string;
-	accountId: string;
-	currency: string;
-	createdAt: string;
-	payeeId: string | null;
-	payeeLabel: string | null;
-	payeeIcon: string | null;
-	tags: { id: string; value: string }[];
-}
-
-const initial: Expense[] = [];
-
-export const expenses = writable<Expense[]>(initial);
 export const expensesLoading = writable(false);
 
-function mapRow(t: ExpenseDetailRow): Expense {
-	return {
-		id: t.id,
-		amount: Math.abs(t.transaction.amount),
-		label: t.label,
-		date: t.date,
-		accountId: t.transaction.account_id,
-		currency: t.transaction.currency,
-		createdAt: t.transaction.created_at,
-		payeeId: t.payee?.id ?? null,
-		payeeLabel: t.payee?.label ?? null,
-		payeeIcon: t.payee?.icon ?? null,
-		tags: t.expense_tags.map((et) => et.tag).filter((tag): tag is Exclude<typeof tag, null> => tag !== null),
-	};
-}
+let currentUserId: string | undefined;
 
-export async function loadExpenses() {
-	expensesLoading.set(true);
-	try {
-		const { data, error } = await supabase
-			.from('expense_details')
-			.select('id, label, date, payee:payee_id(id, label, icon), expense_tags:expenses_tags!expense_id(tag:tag_id(id, value)), transaction:transaction_id!inner(amount, currency, account_id, created_at)')
-			.eq('transaction.type', 'EXPENSE');
-		if (error || !data) return;
-		// Cast rather than trust inference here: with no generated Database
-		// type, the client can't tell these embedded resources are one-to-one
-		// joins and infers them as arrays, which doesn't match the single
-		// objects Postgres actually returns for this query at runtime.
-		const rows = data as unknown as ExpenseDetailRow[];
-		expenses.set(
-			rows.map(mapRow).sort((a, b) => {
-				const dateCmp = b.date.localeCompare(a.date);
-				if (dateCmp !== 0) return dateCmp;
-				return b.createdAt.localeCompare(a.createdAt);
-			}),
-		);
-	} finally {
-		expensesLoading.set(false);
-	}
+/** `transactions` Realtime/pull already flows into Dexie via
+ * stores/accounts.ts's subscription (it covers every transaction type,
+ * not just account-ledger ones) — an EXPENSE-type row lands the same way.
+ * This wrapper only needs to resolve the caller's userId and delegate. */
+export async function createExpense(input: CreateExpenseInput) {
+	if (!currentUserId) throw new Error("Not signed in");
+	await createExpenseLocal(input, currentUserId);
 }
 
 let sub: Awaited<ReturnType<typeof supabase.channel>> | undefined;
+let stopReconciliation: (() => void) | undefined;
 
-export function subscribeExpenses() {
+interface ExpenseDetailRealtimeRow {
+	id: string;
+	user_id: string;
+	label: string;
+	date: string;
+	transaction_id: string;
+	payee_id: string | null;
+	last_modified: string;
+}
+
+interface ExpenseTagRealtimeRow {
+	expense_id: string;
+	tag_id: string;
+	last_modified: string;
+}
+
+function subscribeExpenses() {
 	if (sub) return;
 	sub = supabase
-		.channel('expenses-changes')
+		.channel("expenses-changes")
 		.on(
-			'postgres_changes',
-			{ event: '*', schema: 'public', table: 'transactions', filter: 'type=eq.EXPENSE' },
-			// Full refetch rather than patching the store in place, unlike the
-			// tags/payees stores: an Expense needs joined payee and tag data
-			// that a raw `transactions` realtime payload doesn't carry.
-			() => loadExpenses(),
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "expense_details" },
+			(payload: RealtimePostgresChangesPayload<ExpenseDetailRealtimeRow>) => {
+				if (payload.eventType === "DELETE") {
+					db.expenseDetails.delete(payload.old.id as string);
+					return;
+				}
+				const row = payload.new;
+				db.expenseDetails.put({
+					id: row.id,
+					user_id: row.user_id,
+					label: row.label,
+					date: row.date,
+					transaction_id: row.transaction_id,
+					payee_id: row.payee_id,
+					last_modified: row.last_modified,
+					_synced: 1,
+				});
+			},
+		)
+		.on(
+			"postgres_changes",
+			{ event: "*", schema: "public", table: "expenses_tags" },
+			(payload: RealtimePostgresChangesPayload<ExpenseTagRealtimeRow>) => {
+				if (payload.eventType === "DELETE") {
+					db.expensesTags.delete([payload.old.expense_id as string, payload.old.tag_id as string]);
+					return;
+				}
+				const row = payload.new;
+				db.expensesTags.put({ expense_id: row.expense_id, tag_id: row.tag_id, last_modified: row.last_modified, _synced: 1 });
+			},
 		)
 		.subscribe();
 }
@@ -84,15 +82,32 @@ export function subscribeExpenses() {
 export function unsubscribeExpenses() {
 	sub?.unsubscribe();
 	sub = undefined;
+	stopReconciliation?.();
+	stopReconciliation = undefined;
 }
 
 export async function initExpenses() {
-	subscribeExpenses();
-	try {
-		await loadExpenses();
-	} catch (e) {
-		console.error('Failed to load expenses', e);
-		notifyError('Failed to load expenses');
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
+	if (!session) {
+		expensesReady.set(true);
+		return;
 	}
+	currentUserId = session.user.id;
+
+	subscribeExpenses();
+	expensesLoading.set(true);
+	try {
+		await pullExpenses(currentUserId);
+	} catch (e) {
+		console.error("Failed to load expenses", e);
+		notifyError("Failed to load expenses");
+	} finally {
+		expensesLoading.set(false);
+	}
+	stopReconciliation = scheduleReconciliation(() => {
+		if (currentUserId) pullExpenses(currentUserId).catch((e) => console.error("Expense reconciliation failed", e));
+	});
 	expensesReady.set(true);
 }

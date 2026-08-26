@@ -1,9 +1,14 @@
 <script lang="ts">
-	import { accounts, accountsLoading } from "$lib/stores/accounts";
-	import { expenses, expensesLoading, loadExpenses } from "$lib/stores/expenses";
-	import { payees, loadPayees } from "$lib/stores/payees";
-	import { callFunction } from "$lib/api";
+	import { observeAccounts } from "$lib/local/accounts";
+	import { expensesLoading, createExpense } from "$lib/stores/expenses";
+	import { observeExpenses } from "$lib/local/expenses";
+	import { observePayees, pullPayees } from "$lib/local/payees";
+	import { session } from "$lib/stores/auth";
 	import { formatBalance } from "$lib/format";
+
+	const payees = observePayees();
+	const accounts = observeAccounts();
+	const expenses = observeExpenses();
 	import ExpenseHero from "$lib/components/ExpenseHero.svelte";
 	import ExpenseItem from "$lib/components/ExpenseItem.svelte";
 	import NewExpenseDialog from "$lib/components/NewExpenseDialog.svelte";
@@ -79,16 +84,15 @@
 	}
 
 	async function handleCreateExpense(data: { account_id: string; amount: number; label: string; date: string; payee_id?: string; payee_label?: string }) {
-		await callFunction('create-expense', {
-			account_id: data.account_id,
-			amount: data.amount,
-			label: data.label,
-			date: data.date,
-			payee_id: data.payee_id ?? null,
-			payee_label: data.payee_label ?? null,
-		});
+		// createExpense writes the account debit, the expense, and (for an
+		// existing payee) its tag pills to Dexie before awaiting the real
+		// server call, so the list and balance already reflect it by the
+		// time this resolves — no manual reload needed. A novel payee still
+		// only exists server-side at this point, so pull it in explicitly
+		// rather than waiting on the next reconciliation pass.
+		await createExpense(data);
 		closeDialog();
-		await Promise.all([loadExpenses(), loadPayees()]);
+		if (!data.payee_id) await pullPayees($session!.user.id);
 	}
 </script>
 
@@ -124,6 +128,8 @@
 						payeeLabel={item.payeeLabel}
 						payeeIcon={item.payeeIcon}
 						tags={item.tags}
+						pending={item.pending}
+						error={item.error}
 					/>
 				{/each}
 			{/each}
@@ -131,7 +137,7 @@
 	{/if}
 </div>
 
-<NewExpenseDialog show={showDialog} accounts={$accounts} accountsLoading={$accountsLoading} payees={$payees} onclose={closeDialog} onsubmit={handleCreateExpense} />
+<NewExpenseDialog show={showDialog} accounts={$accounts} payees={$payees} onclose={closeDialog} onsubmit={handleCreateExpense} />
 
 <style>
 	.pill-btn {
