@@ -49,6 +49,14 @@ export function unsubscribeTags() {
 }
 
 export async function initTags() {
+	const {
+		data: { session },
+	} = await supabase.auth.getSession();
+	if (!session) {
+		tagsReady.set(true);
+		return;
+	}
+
 	subscribeTags();
 	tagsLoading.set(true);
 	try {
