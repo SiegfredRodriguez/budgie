@@ -210,12 +210,13 @@ export async function createExpense(input: CreateExpenseInput, userId: string): 
 	const transactionRow = (await db.transactions.get(predictedTransactionId))!;
 	const result = await attemptExpense(transactionRow);
 	if (result.kind === "business-error") {
-		await db.transaction("rw", [db.transactions, db.expenseDetails, db.expensesTags], async () => {
-			await db.transactions.delete(predictedTransactionId);
-			await db.expenseDetails.delete(predictedExpenseId);
-			for (const link of predictedTagLinks) {
-				await db.expensesTags.delete([predictedExpenseId, link.tag_id]);
-			}
+		// Marked, not deleted — same terminal _error state local/ledger.ts
+		// uses for a rejected offline retry, so a rejected expense (and its
+		// tags) stays visible for review instead of vanishing without a
+		// trace. Excluded from the balance fold like any other errored row.
+		await db.transaction("rw", [db.transactions, db.expenseDetails], async () => {
+			await db.transactions.update(predictedTransactionId, { _error: result.message });
+			await db.expenseDetails.update(predictedExpenseId, { _error: result.message });
 		});
 		throw new Error(result.message);
 	}

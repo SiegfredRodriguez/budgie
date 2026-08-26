@@ -277,7 +277,12 @@ export async function topUpAccount(accountId: string, amount: number, currency: 
 	const row = (await db.transactions.get(predictedId))!;
 	const result = await attemptTopUp(row);
 	if (result.kind === "business-error") {
-		await db.transactions.delete(predictedId);
+		// Marked, not deleted — same terminal _error state local/ledger.ts
+		// uses for a rejected offline retry, so a rejected top-up stays
+		// visible (and reviewable) in the account's transaction list instead
+		// of vanishing without a trace. Excluded from the balance fold like
+		// any other errored row.
+		await db.transactions.update(predictedId, { _error: result.message });
 		throw new Error(result.message);
 	}
 	// network-error: queued for later — resolve normally.
@@ -337,9 +342,10 @@ export async function transferAccount(
 	const [fromRow, toRow] = await Promise.all([db.transactions.get(fromPredictedId), db.transactions.get(toPredictedId)]);
 	const result = await attemptTransfer(fromRow!, toRow!);
 	if (result.kind === "business-error") {
+		// Marked, not deleted — see topUpAccount()'s rejection branch above.
 		await db.transaction("rw", [db.transactions], async () => {
-			await db.transactions.delete(fromPredictedId);
-			await db.transactions.delete(toPredictedId);
+			await db.transactions.update(fromPredictedId, { _error: result.message });
+			await db.transactions.update(toPredictedId, { _error: result.message });
 		});
 		throw new Error(result.message);
 	}
