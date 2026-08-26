@@ -32,8 +32,8 @@ export interface Transaction {
  * rejected (e.g. insufficient balance) — retrying won't change that. */
 export type AttemptResult = { kind: "success" } | { kind: "network-error" } | { kind: "business-error"; message: string };
 
-function toAccount(r: { id: string; name: string; icon: string; currency: string; balance: number }): Account {
-	return { id: r.id, label: r.name, icon: r.icon, currency: r.currency, balance: r.balance };
+function toAccount(r: { id: string; name: string; icon: string; currency: string }, balance: number): Account {
+	return { id: r.id, label: r.name, icon: r.icon, currency: r.currency, balance };
 }
 
 function toTransaction(r: LocalTransaction): Transaction {
@@ -50,18 +50,34 @@ function toTransaction(r: LocalTransaction): Transaction {
 }
 
 /** Same session-race fix as observePayees(): re-resolves the session on
- * every run instead of trusting a userId captured once at mount. */
+ * every run instead of trusting a userId captured once at mount.
+ *
+ * Balance is not read off the account row — it's folded from every
+ * transaction booked against that account, summing every row whose
+ * operation hasn't been permanently rejected (`_error` unset). Pending
+ * (`_synced: 0`, no `_error`) rows are included so the optimistic instant-UI
+ * feel is preserved; a row `local/ledger.ts` has marked `_error` drops out
+ * of the sum the moment it's marked, with no separate reversal step
+ * needed. `db.transactions.toArray()` is read inside the liveQuery querier
+ * so Dexie tracks it as a reactive dependency alongside `db.accounts`. */
 export function observeAccounts() {
 	return liveQueryStore(async () => {
 		const {
 			data: { session },
 		} = await supabase.auth.getSession();
 		const userId = session?.user.id;
-		const accounts = await db.accounts.toArray();
+		const [accounts, transactions] = await Promise.all([db.accounts.toArray(), db.transactions.toArray()]);
+
+		const balanceByAccount = new Map<string, number>();
+		for (const t of transactions) {
+			if (t._error) continue;
+			balanceByAccount.set(t.account_id, (balanceByAccount.get(t.account_id) ?? 0) + t.amount);
+		}
+
 		return accounts
 			.filter((a) => !a.is_deleted && a.user_id === userId)
 			.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-			.map(toAccount);
+			.map((a) => toAccount(a, balanceByAccount.get(a.id) ?? 0));
 	}, [] as Account[]);
 }
 
@@ -93,7 +109,6 @@ export async function createAccount(
 			name: trimmed,
 			icon: icon || "wallet",
 			currency,
-			balance,
 			user_id: userId,
 			created_at: now,
 			last_modified: now,
@@ -114,12 +129,17 @@ export async function createAccount(
 		});
 	});
 
-	pushAccount(id, transactionId).catch((e) => console.error("Account sync failed, will retry:", e));
+	pushAccount(id, transactionId, balance).catch((e) => console.error("Account sync failed, will retry:", e));
 
 	return { id, label: trimmed, icon: icon || "wallet", currency, balance };
 }
 
-async function pushAccount(id: string, transactionId: string): Promise<void> {
+/** `balance` here is the account's *initial* balance (the CREATION
+ * transaction's amount) — not read off the account row, since that no
+ * longer stores balance at all (see LocalAccount.balance's comment in
+ * db.ts). Callers source it from wherever the CREATION transaction row's
+ * `amount` already lives locally. */
+async function pushAccount(id: string, transactionId: string, balance: number): Promise<void> {
 	const row = await db.accounts.get(id);
 	if (!row) return;
 
@@ -129,7 +149,7 @@ async function pushAccount(id: string, transactionId: string): Promise<void> {
 		name: row.name,
 		icon: row.icon,
 		currency: row.currency,
-		balance: row.balance,
+		balance,
 	});
 
 	await db.accounts.update(id, { last_modified: saved.last_modified, _synced: 1 });
@@ -145,9 +165,10 @@ export async function ensureAccountSynced(id: string): Promise<string> {
 	const row = await db.accounts.get(id);
 	if (row?._synced) return id;
 	// createAccount's push already carries the CREATION transaction; a
-	// bare retry here only needs the account's own fields.
+	// bare retry here only needs the account's own fields plus that
+	// transaction's amount (the initial balance the server expects).
 	const transactionRow = await db.transactions.where("account_id").equals(id).and((t) => t.type === "CREATION").first();
-	await pushAccount(id, transactionRow?.id ?? crypto.randomUUID());
+	await pushAccount(id, transactionRow?.id ?? crypto.randomUUID(), transactionRow?.amount ?? 0);
 	return id;
 }
 
@@ -171,7 +192,6 @@ async function pushDelete(id: string): Promise<void> {
 export async function attemptTopUp(row: LocalTransaction): Promise<AttemptResult> {
 	try {
 		const saved = await callFunction<{
-			account: { balance: number; last_modified: string };
 			transaction: { id: string; last_modified: string };
 		}>("top-up-account", {
 			account_id: row.account_id,
@@ -180,10 +200,7 @@ export async function attemptTopUp(row: LocalTransaction): Promise<AttemptResult
 			description: row.description,
 			transaction_id: row.id,
 		});
-		await db.transaction("rw", [db.accounts, db.transactions], async () => {
-			await db.accounts.update(row.account_id, { balance: saved.account.balance, last_modified: saved.account.last_modified, _synced: 1 });
-			await db.transactions.update(row.id, { last_modified: saved.transaction.last_modified, _synced: 1 });
-		});
+		await db.transactions.update(row.id, { last_modified: saved.transaction.last_modified, _synced: 1 });
 		return { kind: "success" };
 	} catch (e) {
 		if (e instanceof NetworkError) return { kind: "network-error" };
@@ -195,8 +212,6 @@ export async function attemptTopUp(row: LocalTransaction): Promise<AttemptResult
 export async function attemptTransfer(fromRow: LocalTransaction, toRow: LocalTransaction): Promise<AttemptResult> {
 	try {
 		const saved = await callFunction<{
-			from: { balance: number; last_modified: string };
-			to: { balance: number; last_modified: string };
 			from_transaction: { last_modified: string };
 			to_transaction: { last_modified: string };
 		}>("transfer-account", {
@@ -208,9 +223,7 @@ export async function attemptTransfer(fromRow: LocalTransaction, toRow: LocalTra
 			from_transaction_id: fromRow.id,
 			to_transaction_id: toRow.id,
 		});
-		await db.transaction("rw", [db.accounts, db.transactions], async () => {
-			await db.accounts.update(fromRow.account_id, { balance: saved.from.balance, last_modified: saved.from.last_modified, _synced: 1 });
-			await db.accounts.update(toRow.account_id, { balance: saved.to.balance, last_modified: saved.to.last_modified, _synced: 1 });
+		await db.transaction("rw", [db.transactions], async () => {
 			await db.transactions.update(fromRow.id, { last_modified: saved.from_transaction.last_modified, _synced: 1 });
 			await db.transactions.update(toRow.id, { last_modified: saved.to_transaction.last_modified, _synced: 1 });
 		});
@@ -221,21 +234,14 @@ export async function attemptTransfer(fromRow: LocalTransaction, toRow: LocalTra
 	}
 }
 
-async function rollbackPrediction(accountId: string, predictedId: string, balanceDelta: number): Promise<void> {
-	const account = await db.accounts.get(accountId);
-	await db.transaction("rw", [db.accounts, db.transactions], async () => {
-		if (account) await db.accounts.update(accountId, { balance: account.balance + balanceDelta });
-		await db.transactions.delete(predictedId);
-	});
-}
-
-/** Optimistic top-up: predicts the new balance and a pending transaction
- * instantly (liveQuery picks them up immediately). If offline, the
- * prediction is left in place — pending, safe to retry later since the
- * RPC is idempotent on this row's own id — and this resolves normally so
- * the caller's dialog closes as though it worked. If online and the
- * server definitively rejects it (e.g. insufficient balance), the
- * prediction is rolled back entirely and the error is rethrown for the
+/** Optimistic top-up: predicts a pending transaction instantly (liveQuery
+ * folds it into the account's balance immediately — see observeAccounts()).
+ * If offline, the prediction is left in place — pending, safe to retry
+ * later since the RPC is idempotent on this row's own id — and this
+ * resolves normally so the caller's dialog closes as though it worked. If
+ * online and the server definitively rejects it (e.g. insufficient
+ * balance), the prediction row is deleted outright (nothing else to undo —
+ * balance is derived, not stored) and the error is rethrown for the
  * caller's existing try/catch + notifyError UI. */
 export async function topUpAccount(accountId: string, amount: number, currency: string, description?: string): Promise<void> {
 	const predictedId = crypto.randomUUID();
@@ -243,20 +249,17 @@ export async function topUpAccount(accountId: string, amount: number, currency: 
 	const account = await db.accounts.get(accountId);
 	if (!account) throw new Error("Account not found locally");
 
-	await db.transaction("rw", [db.accounts, db.transactions], async () => {
-		await db.accounts.update(accountId, { balance: account.balance + amount });
-		await db.transactions.put({
-			id: predictedId,
-			operation_id: predictedId,
-			account_id: accountId,
-			type: "TOP_UP",
-			amount,
-			currency,
-			description: description ?? null,
-			created_at: now,
-			last_modified: now,
-			_synced: 0,
-		});
+	await db.transactions.put({
+		id: predictedId,
+		operation_id: predictedId,
+		account_id: accountId,
+		type: "TOP_UP",
+		amount,
+		currency,
+		description: description ?? null,
+		created_at: now,
+		last_modified: now,
+		_synced: 0,
 	});
 
 	try {
@@ -273,7 +276,7 @@ export async function topUpAccount(accountId: string, amount: number, currency: 
 	const row = (await db.transactions.get(predictedId))!;
 	const result = await attemptTopUp(row);
 	if (result.kind === "business-error") {
-		await rollbackPrediction(accountId, predictedId, -amount);
+		await db.transactions.delete(predictedId);
 		throw new Error(result.message);
 	}
 	// network-error: queued for later — resolve normally.
@@ -296,9 +299,7 @@ export async function transferAccount(
 	const [fromAccount, toAccount] = await Promise.all([db.accounts.get(fromId), db.accounts.get(toId)]);
 	if (!fromAccount || !toAccount) throw new Error("Account not found locally");
 
-	await db.transaction("rw", [db.accounts, db.transactions], async () => {
-		await db.accounts.update(fromId, { balance: fromAccount.balance - amount });
-		await db.accounts.update(toId, { balance: toAccount.balance + amount });
+	await db.transaction("rw", [db.transactions], async () => {
 		await db.transactions.put({
 			id: fromPredictedId,
 			operation_id: operationId,
@@ -335,9 +336,7 @@ export async function transferAccount(
 	const [fromRow, toRow] = await Promise.all([db.transactions.get(fromPredictedId), db.transactions.get(toPredictedId)]);
 	const result = await attemptTransfer(fromRow!, toRow!);
 	if (result.kind === "business-error") {
-		await db.transaction("rw", [db.accounts, db.transactions], async () => {
-			await db.accounts.update(fromId, { balance: fromAccount.balance });
-			await db.accounts.update(toId, { balance: toAccount.balance });
+		await db.transaction("rw", [db.transactions], async () => {
 			await db.transactions.delete(fromPredictedId);
 			await db.transactions.delete(toPredictedId);
 		});
@@ -361,7 +360,7 @@ export async function pullAccounts(userId: string): Promise<void> {
 			await pushDelete(row.id).catch((e) => console.error("Account delete retry-sync failed:", e));
 		} else {
 			const transactionRow = await db.transactions.where("account_id").equals(row.id).and((t) => t.type === "CREATION").first();
-			await pushAccount(row.id, transactionRow?.id ?? crypto.randomUUID()).catch((e) =>
+			await pushAccount(row.id, transactionRow?.id ?? crypto.randomUUID(), transactionRow?.amount ?? 0).catch((e) =>
 				console.error("Account retry-sync failed:", e),
 			);
 		}

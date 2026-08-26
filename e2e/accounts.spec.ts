@@ -240,5 +240,51 @@ test.describe('Accounts', () => {
 
 		const res = await request.get(`${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}&select=balance`, { headers: h });
 		expect((await res.json())[0].balance).toBe(200);
+
+		// Balance is now a fold over transactions, not a stored delta — this
+		// confirms the displayed number also reflects the conflicting
+		// transfer landing and the queued one being excluded as errored, not
+		// just the server-side column checked above.
+		await revealBalance(card);
+		await expect(card.locator('.card-balance')).toHaveText('PHP 200.00');
+	});
+
+	test('balance reflects a folded sum across several kinds of operation', async ({ page, request }) => {
+		// Balance is derived by summing every transactions row for the
+		// account (CREATION, TOP_UP, TRANSFER), not maintained as a running
+		// total — this exercises a mix of all three in one account and checks
+		// the hand-computed sum against what's displayed.
+		test.setTimeout(20_000);
+		const name = v('Fold Source');
+		const sinkName = v('Fold Sink');
+		await createAccount(request, name, 1000); // CREATION: +1000
+		await createAccount(request, sinkName, 0);
+		await page.goto('/accounts');
+
+		const card = cardFor(page, name);
+		const sinkCard = cardFor(page, sinkName);
+		await expect(card).toBeVisible();
+		await expect(sinkCard).toBeVisible();
+
+		await card.getByRole('button', { name: 'Top Up' }).click();
+		const topUpDialog = page.getByRole('dialog');
+		await topUpDialog.locator('.modal-input').fill('500'); // TOP_UP: +500
+		await topUpDialog.getByRole('button', { name: 'Top Up' }).click({ timeout: 10_000 });
+		await expect(topUpDialog).not.toBeVisible({ timeout: 10_000 });
+
+		await card.getByRole('button', { name: 'Transfer' }).click();
+		const transferDialog = page.getByRole('dialog');
+		await transferDialog.locator('.source-combo-input').fill(sinkName);
+		const sinkOption = transferDialog.locator('.source-option').filter({ hasText: sinkName });
+		await expect(sinkOption).toBeVisible();
+		await sinkOption.click();
+		await expect(transferDialog.locator('.source-combo-balance')).toBeVisible();
+		await transferDialog.locator('.modal-input').fill('300'); // TRANSFER: -300
+		await transferDialog.getByRole('button', { name: 'Transfer' }).click({ timeout: 15_000 });
+		await expect(transferDialog).not.toBeVisible({ timeout: 15_000 });
+
+		// 1000 + 500 - 300 = 1200
+		await revealBalance(card);
+		await expect(card.locator('.card-balance')).toHaveText('PHP 1,200.00');
 	});
 });

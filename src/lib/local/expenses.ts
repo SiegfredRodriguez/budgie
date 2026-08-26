@@ -108,7 +108,6 @@ export async function attemptExpense(transactionRow: LocalTransaction): Promise<
 		const saved = await callFunction<{
 			expense: { id: string; user_id: string; label: string; date: string; payee_id: string | null; last_modified: string };
 			transaction: { id: string; last_modified: string };
-			account: { balance: number; last_modified: string };
 			tag_ids: string[];
 		}>("create-expense", {
 			account_id: transactionRow.account_id,
@@ -121,8 +120,7 @@ export async function attemptExpense(transactionRow: LocalTransaction): Promise<
 			expense_id: expenseRow.id,
 		});
 
-		await db.transaction("rw", [db.accounts, db.transactions, db.expenseDetails, db.expensesTags], async () => {
-			await db.accounts.update(transactionRow.account_id, { balance: saved.account.balance, last_modified: saved.account.last_modified, _synced: 1 });
+		await db.transaction("rw", [db.transactions, db.expenseDetails, db.expensesTags], async () => {
 			await db.transactions.update(transactionRow.id, { last_modified: saved.transaction.last_modified, _synced: 1 });
 			await db.expenseDetails.update(expenseRow.id, {
 				payee_id: saved.expense.payee_id,
@@ -167,8 +165,7 @@ export async function createExpense(input: CreateExpenseInput, userId: string): 
 		predictedTagLinks = links.map((l) => ({ tag_id: l.tag_id }));
 	}
 
-	await db.transaction("rw", [db.accounts, db.transactions, db.expenseDetails, db.expensesTags], async () => {
-		await db.accounts.update(input.account_id, { balance: account.balance - input.amount });
+	await db.transaction("rw", [db.transactions, db.expenseDetails, db.expensesTags], async () => {
 		await db.transactions.put({
 			id: predictedTransactionId,
 			operation_id: predictedTransactionId,
@@ -212,8 +209,7 @@ export async function createExpense(input: CreateExpenseInput, userId: string): 
 	const transactionRow = (await db.transactions.get(predictedTransactionId))!;
 	const result = await attemptExpense(transactionRow);
 	if (result.kind === "business-error") {
-		await db.transaction("rw", [db.accounts, db.transactions, db.expenseDetails, db.expensesTags], async () => {
-			await db.accounts.update(input.account_id, { balance: account.balance });
+		await db.transaction("rw", [db.transactions, db.expenseDetails, db.expensesTags], async () => {
 			await db.transactions.delete(predictedTransactionId);
 			await db.expenseDetails.delete(predictedExpenseId);
 			for (const link of predictedTagLinks) {

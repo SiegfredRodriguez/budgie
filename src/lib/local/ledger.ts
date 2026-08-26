@@ -88,17 +88,16 @@ async function attemptTransferPair(rows: LocalTransaction[]) {
 	return attemptTransfer(fromRow, toRow);
 }
 
-/** Reverses each row's optimistic balance impact (the server never applied
- * it) and marks it permanently failed — `_synced` stays 0 so it's never
+/** Marks each row permanently failed — `_synced` stays 0 so it's never
  * mistaken for confirmed, but `_error` being set excludes it from every
- * future retry pass. For an EXPENSE operation, also marks the paired
+ * future retry pass, and from observeAccounts()'s balance fold (its
+ * optimistic impact simply disappears from the sum, no reversal arithmetic
+ * needed). For an EXPENSE operation, also marks the paired
  * LocalExpenseDetail row so the UI can show the failure without a second
  * lookup. */
 async function markOperationError(rows: LocalTransaction[], message: string): Promise<void> {
-	await db.transaction("rw", [db.accounts, db.transactions, db.expenseDetails], async () => {
+	await db.transaction("rw", [db.transactions, db.expenseDetails], async () => {
 		for (const row of rows) {
-			const account = await db.accounts.get(row.account_id);
-			if (account) await db.accounts.update(row.account_id, { balance: account.balance - row.amount });
 			await db.transactions.update(row.id, { _error: message });
 		}
 		if (rows[0].type === "EXPENSE") {
