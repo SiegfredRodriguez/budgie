@@ -3,6 +3,7 @@ import { supabase } from "$lib/supabase";
 import { callFunction } from "$lib/api";
 import { liveQueryStore } from "$lib/local/liveQueryStore";
 import type { Tag } from "$lib/local/tags";
+import { uuid } from "$lib/uuid";
 
 export interface Payee {
 	id: string;
@@ -71,7 +72,7 @@ export async function createPayee(
 	const trimmed = label.trim();
 	if (!trimmed) throw new Error("label is required");
 
-	const id = crypto.randomUUID();
+	const id = uuid();
 	const now = new Date().toISOString();
 
 	await db.transaction("rw", [db.payees, db.payeesTags], async () => {

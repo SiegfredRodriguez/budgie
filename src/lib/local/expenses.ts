@@ -4,6 +4,7 @@ import { callFunction, NetworkError } from "$lib/api";
 import { liveQueryStore } from "$lib/local/liveQueryStore";
 import { ensurePayeeSynced } from "$lib/local/payees";
 import { ensureAccountSynced, type AttemptResult } from "$lib/local/accounts";
+import { uuid } from "$lib/uuid";
 
 export interface Expense {
 	id: string;
@@ -151,8 +152,8 @@ export async function attemptExpense(transactionRow: LocalTransaction): Promise<
  * back and the error is rethrown for the caller's existing try/catch +
  * notifyError UI. */
 export async function createExpense(input: CreateExpenseInput, userId: string): Promise<void> {
-	const predictedTransactionId = crypto.randomUUID();
-	const predictedExpenseId = crypto.randomUUID();
+	const predictedTransactionId = uuid();
+	const predictedExpenseId = uuid();
 	const now = new Date().toISOString();
 	const currency = "PHP"; // create-expense has never taken the debited account's own currency — matched as-is, not fixed here.
 

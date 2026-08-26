@@ -2,6 +2,7 @@ import { db, type LocalTransaction } from "$lib/db";
 import { supabase } from "$lib/supabase";
 import { callFunction, NetworkError } from "$lib/api";
 import { liveQueryStore } from "$lib/local/liveQueryStore";
+import { uuid } from "$lib/uuid";
 
 export interface Account {
 	id: string;
@@ -99,8 +100,8 @@ export async function createAccount(
 	userId: string,
 ): Promise<Account> {
 	const trimmed = name.trim() || "Untitled Account";
-	const id = crypto.randomUUID();
-	const transactionId = crypto.randomUUID();
+	const id = uuid();
+	const transactionId = uuid();
 	const now = new Date().toISOString();
 
 	await db.transaction("rw", [db.accounts, db.transactions], async () => {
@@ -168,7 +169,7 @@ export async function ensureAccountSynced(id: string): Promise<string> {
 	// bare retry here only needs the account's own fields plus that
 	// transaction's amount (the initial balance the server expects).
 	const transactionRow = await db.transactions.where("account_id").equals(id).and((t) => t.type === "CREATION").first();
-	await pushAccount(id, transactionRow?.id ?? crypto.randomUUID(), transactionRow?.amount ?? 0);
+	await pushAccount(id, transactionRow?.id ?? uuid(), transactionRow?.amount ?? 0);
 	return id;
 }
 
@@ -244,7 +245,7 @@ export async function attemptTransfer(fromRow: LocalTransaction, toRow: LocalTra
  * balance is derived, not stored) and the error is rethrown for the
  * caller's existing try/catch + notifyError UI. */
 export async function topUpAccount(accountId: string, amount: number, currency: string, description?: string): Promise<void> {
-	const predictedId = crypto.randomUUID();
+	const predictedId = uuid();
 	const now = new Date().toISOString();
 	const account = await db.accounts.get(accountId);
 	if (!account) throw new Error("Account not found locally");
@@ -292,9 +293,9 @@ export async function transferAccount(
 	currency: string,
 	description?: string,
 ): Promise<void> {
-	const fromPredictedId = crypto.randomUUID();
-	const toPredictedId = crypto.randomUUID();
-	const operationId = crypto.randomUUID();
+	const fromPredictedId = uuid();
+	const toPredictedId = uuid();
+	const operationId = uuid();
 	const now = new Date().toISOString();
 	const [fromAccount, toAccount] = await Promise.all([db.accounts.get(fromId), db.accounts.get(toId)]);
 	if (!fromAccount || !toAccount) throw new Error("Account not found locally");
@@ -360,7 +361,7 @@ export async function pullAccounts(userId: string): Promise<void> {
 			await pushDelete(row.id).catch((e) => console.error("Account delete retry-sync failed:", e));
 		} else {
 			const transactionRow = await db.transactions.where("account_id").equals(row.id).and((t) => t.type === "CREATION").first();
-			await pushAccount(row.id, transactionRow?.id ?? crypto.randomUUID(), transactionRow?.amount ?? 0).catch((e) =>
+			await pushAccount(row.id, transactionRow?.id ?? uuid(), transactionRow?.amount ?? 0).catch((e) =>
 				console.error("Account retry-sync failed:", e),
 			);
 		}
