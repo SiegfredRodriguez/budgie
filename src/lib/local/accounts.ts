@@ -241,9 +241,10 @@ export async function attemptTransfer(fromRow: LocalTransaction, toRow: LocalTra
  * later since the RPC is idempotent on this row's own id — and this
  * resolves normally so the caller's dialog closes as though it worked. If
  * online and the server definitively rejects it (e.g. insufficient
- * balance), the prediction row is deleted outright (nothing else to undo —
- * balance is derived, not stored) and the error is rethrown for the
- * caller's existing try/catch + notifyError UI. */
+ * balance), the prediction row is marked `_error` (excluded from the
+ * balance fold, kept for review — see the business-error branch below)
+ * and the error is rethrown for the caller's existing try/catch +
+ * notifyError UI. */
 export async function topUpAccount(accountId: string, amount: number, currency: string, description?: string): Promise<void> {
 	const predictedId = uuid();
 	const now = new Date().toISOString();
