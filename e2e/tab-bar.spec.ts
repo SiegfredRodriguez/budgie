@@ -25,7 +25,7 @@ test.describe('Tab bar bottom spacing', () => {
 		// wrapper vs. with one) — session starts null and flips to a real
 		// value once dev-mode auto-login resolves, which tears down and
 		// remounts the whole routed page once. Every other spec sidesteps
-		// this by waiting for the splash overlay (a hardcoded 2s minimum,
+		// this by waiting for the splash overlay (a hardcoded 500ms minimum,
 		// well past the remount) before touching the page; this test needs
 		// the same wait, or it can grab a card that gets replaced moments
 		// later by the remount.

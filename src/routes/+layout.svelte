@@ -62,12 +62,14 @@
 	});
 
 	$effect(() => {
-		// Splash stays up for a minimum of 2s, but also until every domain
+		// Splash stays up for a minimum of 500ms, but also until every domain
 		// store has actually finished loading (bootstrapReady resolves true
-		// immediately when there's no session to load data for).
+		// immediately when there's no session to load data for). Data now
+		// loads from Dexie rather than over the network, so the old 2s floor
+		// (sized for a network round trip) was just idle waiting.
 		if (!$session || !$bootstrapReady) return;
 		const elapsed = Date.now() - splashStart;
-		const remaining = Math.max(0, 2000 - elapsed);
+		const remaining = Math.max(0, 500 - elapsed);
 		const timer = setTimeout(() => (splashDone = true), remaining);
 		return () => clearTimeout(timer);
 	});
