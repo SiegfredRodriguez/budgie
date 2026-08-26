@@ -372,7 +372,7 @@ export async function pullAccounts(userId: string): Promise<void> {
 
 	const { data: accountRows, error: accountError } = await supabase
 		.from("accounts")
-		.select("id, name, icon, currency, balance, user_id, created_at, last_modified, is_deleted")
+		.select("id, name, icon, currency, user_id, created_at, last_modified, is_deleted")
 		.eq("user_id", userId)
 		.gt("last_modified", accountsSince)
 		.order("last_modified", { ascending: true });
@@ -385,7 +385,6 @@ export async function pullAccounts(userId: string): Promise<void> {
 				name: r.name,
 				icon: r.icon ?? "",
 				currency: r.currency,
-				balance: r.balance,
 				user_id: r.user_id,
 				created_at: r.created_at,
 				last_modified: r.last_modified,

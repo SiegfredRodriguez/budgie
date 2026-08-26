@@ -41,12 +41,6 @@ export interface LocalAccount {
 	name: string;
 	icon: string;
 	currency: string;
-	/** No longer authoritative locally — balance is derived by folding
-	 * `transactions` for this account (see local/accounts.ts's
-	 * observeAccounts()). This field is only an informational value kept in
-	 * sync by pullAccounts()'s server pull and the Realtime `accounts`
-	 * payload handler; nothing reads it for display anymore. */
-	balance?: number;
 	user_id: string;
 	created_at: string;
 	last_modified: string;
