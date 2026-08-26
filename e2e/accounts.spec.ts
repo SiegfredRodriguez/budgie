@@ -212,6 +212,12 @@ test.describe('Accounts', () => {
 		const accountId = await createAccount(request, name, 500);
 		const sinkId = await createAccount(request, sinkName, 0);
 		await page.goto('/accounts');
+		// This second navigation (beforeEach already did one) remounts the
+		// splash overlay, which intercepts pointer events for a hardcoded ~2s
+		// minimum — on a slower CI runner that can outlast a bare
+		// `expect(card).toBeVisible()`, so the Transfer click below can land
+		// while it's still up. Wait for it to actually finish first.
+		await page.locator('.splash-overlay.done').waitFor({ state: 'attached', timeout: 15_000 });
 
 		const card = cardFor(page, name);
 		await expect(card).toBeVisible();
